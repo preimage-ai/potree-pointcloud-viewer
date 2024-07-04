@@ -784,8 +784,12 @@ export class PointCloudOctree extends PointCloudTree {
 
 		{ // update pick material
 			pickMaterial.pointSizeType = pointSizeType;
-			//pickMaterial.shape = this.material.shape;
-			pickMaterial.shape = Potree.PointShape.PARABOLOID;
+			// //pickMaterial.shape = this.material.shape;
+			// pickMaterial.shape = Potree.PointShape.PARABOLOID;
+			pickMaterial.shape = this.material.shape;
+			if(renderer.getContext().getExtension( "EXT_frag_depth" )){
+				pickMaterial.shape = Potree.PointShape.PARABOLOID;
+			};
 
 			pickMaterial.uniforms.uFilterReturnNumberRange.value = this.material.uniforms.uFilterReturnNumberRange.value;
 			pickMaterial.uniforms.uFilterNumberOfReturnsRange.value = this.material.uniforms.uFilterNumberOfReturnsRange.value;

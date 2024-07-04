@@ -148,6 +148,91 @@ export class EarthControls extends EventDispatcher {
 		let dblclick = (e) => {
 			this.zoomToLocation(e.mouse);
 		};
+		let previousTouch ;
+		let previousStartTouch ;
+		let onTouchStart = (e) => {
+			previousTouch = e;
+			e.timeStamp = Date.now();
+			const myCanvas = this.renderer.domElement.getBoundingClientRect();
+			const touch = new THREE.Vector2(e.touches[0].clientX - myCanvas.left, e.touches[0].clientY - myCanvas.top);
+			let I = Utils.getMousePointCloudIntersection(
+				touch, 
+				this.scene.getActiveCamera(), 
+				this.viewer, 
+				this.scene.pointclouds, 
+				{pickClipped: false});
+
+			if (I) {
+				this.pivot = I.location;
+				this.camStart = this.scene.getActiveCamera().clone();
+				this.pivotIndicator.visible = true;
+				this.pivotIndicator.position.copy(I.location);
+			}
+			
+			if (!previousStartTouch) {
+				previousStartTouch = e;
+			} else {
+				if (e.timeStamp - previousStartTouch.timeStamp < 500) {
+						this.zoomToLocation(touch);
+				}
+				previousStartTouch = e;
+			}
+		};
+
+		let onTouchend = (e) => {
+			this.camStart = null;
+			this.pivot = null;
+			this.pivotIndicator.visible = false;
+			previousTouch = e;
+		};
+
+		let onTouchMove = (e) => {
+			console.log("onTouchMove", e);
+			if (e.touches.length === 2 && previousTouch.touches.length === 2){
+				console.log("onTouchMove 2", previousTouch, e);
+				let prev = previousTouch;
+				let curr = e;
+
+				let prevDX = prev.touches[0].pageX - prev.touches[1].pageX;
+				let prevDY = prev.touches[0].pageY - prev.touches[1].pageY;
+				let prevDist = Math.sqrt(prevDX * prevDX + prevDY * prevDY);
+
+				let currDX = curr.touches[0].pageX - curr.touches[1].pageX;
+				let currDY = curr.touches[0].pageY - curr.touches[1].pageY;
+				let currDist = Math.sqrt(currDX * currDX + currDY * currDY);
+
+				let delta = currDist / prevDist;
+				console.log("delta", delta);
+				let resolvedRadius = this.scene.view.radius + this.radiusDelta;
+				console.log("resolvedRadius", resolvedRadius);
+				let newRadius = resolvedRadius / delta;
+				console.log("newRadius", newRadius);
+				this.radiusDelta = newRadius - resolvedRadius;
+				console.log("this.radiusDelta", this.radiusDelta);
+				this.stopTweens();
+			}else if(e.touches.length === 3 && previousTouch.touches.length === 3){
+				console.log("onTouchMove 3", previousTouch, e);
+				let prev = previousTouch;
+				let curr = e;
+
+				let prevMeanX = (prev.touches[0].pageX + prev.touches[1].pageX + prev.touches[2].pageX) / 3;
+				let prevMeanY = (prev.touches[0].pageY + prev.touches[1].pageY + prev.touches[2].pageY) / 3;
+
+				let currMeanX = (curr.touches[0].pageX + curr.touches[1].pageX + curr.touches[2].pageX) / 3;
+				let currMeanY = (curr.touches[0].pageY + curr.touches[1].pageY + curr.touches[2].pageY) / 3;
+
+				let delta = {
+					x: (currMeanX - prevMeanX) / this.renderer.domElement.clientWidth,
+					y: (currMeanY - prevMeanY) / this.renderer.domElement.clientHeight
+				};
+
+				this.panDelta.x += delta.x;
+				this.panDelta.y += delta.y;
+
+				this.stopTweens();
+			}
+			previousTouch = e;
+		};
 
 		this.addEventListener('drag', drag);
 		this.addEventListener('drop', drop);
@@ -155,6 +240,8 @@ export class EarthControls extends EventDispatcher {
 		this.addEventListener('mousedown', onMouseDown);
 		this.addEventListener('mouseup', onMouseUp);
 		this.addEventListener('dblclick', dblclick);
+		this.addEventListener('touchstart', onTouchStart);
+		this.addEventListener('touchend', onTouchend);
 	}
 
 	setScene (scene) {
@@ -164,6 +251,11 @@ export class EarthControls extends EventDispatcher {
 	stop(){
 		this.wheelDelta = 0;
 		this.zoomDelta.set(0, 0, 0);
+	}
+
+	stopTweens () {
+		this.tweens.forEach(e => e.stop());
+		this.tweens = [];
 	}
 	
 	zoomToLocation(mouse){

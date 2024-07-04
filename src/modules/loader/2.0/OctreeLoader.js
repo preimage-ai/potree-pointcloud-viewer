@@ -7,8 +7,9 @@ import {OctreeGeometry, OctreeGeometryNode} from "./OctreeGeometry.js";
 
 export class NodeLoader{
 
-	constructor(url){
+	constructor(url, remainingPaths){
 		this.url = url;
+		this.remainingPaths = remainingPaths
 	}
 
 	async load(node){
@@ -34,8 +35,7 @@ export class NodeLoader{
 
 			let {byteOffset, byteSize} = node;
 
-
-			let urlOctree = `${this.url}/../octree.bin`;
+			let urlOctree = this.remainingPaths ? this.remainingPaths['octree'] : `${this.url}/../octree.bin`;
 
 			let first = byteOffset;
 			let last = byteOffset + byteSize - 1n;
@@ -150,6 +150,7 @@ export class NodeLoader{
 
 	parseHierarchy(node, buffer){
 
+		try {
 		let view = new DataView(buffer);
 		let tStart = performance.now();
 
@@ -233,19 +234,22 @@ export class NodeLoader{
 			// 	yield;
 			// }
 		}
-
 		let duration = (performance.now() - tStart);
 
 		// if(duration > 20){
 		// 	let msg = `duration: ${duration}ms, numNodes: ${numNodes}`;
 		// 	console.log(msg);
-		// }
+		 } catch (e) {
+			console.log("node loader parseHierarchy failed");
+			console.log(e);
+		}
 	}
 
 	async loadHierarchy(node){
 
-		let {hierarchyByteOffset, hierarchyByteSize} = node;
-		let hierarchyPath = `${this.url}/../hierarchy.bin`;
+		try {
+			let {hierarchyByteOffset, hierarchyByteSize} = node;
+		let hierarchyPath = this.remainingPaths ? this.remainingPaths['hierarchy'] : `${this.url}/../hierarchy.bin`;
 		
 		let first = hierarchyByteOffset;
 		let last = first + hierarchyByteSize - 1n;
@@ -260,7 +264,6 @@ export class NodeLoader{
 
 
 		let buffer = await response.arrayBuffer();
-
 		this.parseHierarchy(node, buffer);
 
 		// let promise = new Promise((resolve) => {
@@ -280,6 +283,10 @@ export class NodeLoader{
 		// });
 
 		// await promise;
+		} catch (e) {
+			console.log("node loader loadHierarchy failed");
+			console.log(e);
+		}
 
 		
 
@@ -333,7 +340,8 @@ export class OctreeLoader{
 
 	static parseAttributes(jsonAttributes){
 
-		let attributes = new PointAttributes();
+		try {
+			let attributes = new PointAttributes();
 
 		let replacements = {
 			"rgb": "rgba",
@@ -345,7 +353,6 @@ export class OctreeLoader{
 			let type = typenameTypeattributeMap[jsonAttribute.type];
 
 			let potreeAttributeName = replacements[name] ? replacements[name] : name;
-
 			let attribute = new PointAttribute(potreeAttributeName, type, numElements);
 
 			if(numElements === 1){
@@ -382,16 +389,20 @@ export class OctreeLoader{
 		}
 
 		return attributes;
+		} catch (e) {
+			console.log("octree parseAttributes failed");
+			console.log(e);
+		}
 	}
 
-	static async load(url){
+	static async load(url, remainingPaths){
 
-		let response = await fetch(url);
+		try {
+			let response = await fetch(url);
 		let metadata = await response.json();
-
 		let attributes = OctreeLoader.parseAttributes(metadata.attributes);
 
-		let loader = new NodeLoader(url);
+		let loader = new NodeLoader(url, remainingPaths);
 		loader.metadata = metadata;
 		loader.attributes = attributes;
 		loader.scale = metadata.scale;
@@ -430,9 +441,7 @@ export class OctreeLoader{
 		root.hasChildren = false;
 		root.spacing = octree.spacing;
 		root.byteOffset = 0;
-
 		octree.root = root;
-
 		loader.load(root);
 
 		let result = {
@@ -440,6 +449,10 @@ export class OctreeLoader{
 		};
 
 		return result;
+		} catch (e) {
+			console.log("octree load failed");
+			console.log(e);
+		}
 
 	}
 
