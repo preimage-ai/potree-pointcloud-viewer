@@ -90,9 +90,23 @@ export class OrbitControls extends EventDispatcher{
 		};
 
 		let previousTouch = null;
+		let previousStartTouch = null
 		let touchStart = e => {
+			if (e.type === 'touchstart') {
+				e.timeStamp = Date.now();
+				if (!previousStartTouch) {
+					previousStartTouch = e;
+				} else {
+					if (e.timeStamp - previousStartTouch.timeStamp < 500) {
+						const myCanvas = this.renderer.domElement.getBoundingClientRect();
+						const touch = new THREE.Vector2(e.touches[0].clientX - myCanvas.left, e.touches[0].clientY - myCanvas.top);
+						this.zoomToLocation(touch);
+				}
+				previousStartTouch = e;
+			}
 			previousTouch = e;
 		};
+		}
 
 		let touchEnd = e => {
 			previousTouch = e;
@@ -174,7 +188,6 @@ export class OrbitControls extends EventDispatcher{
 		if (I === null) {
 			return;
 		}
-
 		let targetRadius = 0;
 		{
 			let minimumJumpDistance = 0.2;
@@ -188,14 +201,12 @@ export class OrbitControls extends EventDispatcher{
 			targetRadius = Math.min(this.scene.view.radius, radius);
 			targetRadius = Math.max(minimumJumpDistance, targetRadius);
 		}
-
 		let d = this.scene.view.direction.multiplyScalar(-1);
 		let cameraTargetPosition = new THREE.Vector3().addVectors(I.location, d.multiplyScalar(targetRadius));
 		// TODO Unused: let controlsTargetPosition = I.location;
 
 		let animationDuration = 600;
 		let easing = TWEEN.Easing.Quartic.Out;
-
 		{ // animate
 			let value = {x: 0};
 			let tween = new TWEEN.Tween(value).to({x: 1}, animationDuration);
@@ -220,7 +231,6 @@ export class OrbitControls extends EventDispatcher{
 			tween.onComplete(() => {
 				this.tweens = this.tweens.filter(e => e !== tween);
 			});
-
 			tween.start();
 		}
 	}
