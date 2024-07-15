@@ -183,7 +183,6 @@ export class OrientedImageLoader{
 	}
 
 	static async loadImageParams(path){
-
 		const response = await fetch(path);
 		if(!response.ok){
 			console.error(`failed to load ${path}`);
@@ -209,12 +208,12 @@ export class OrientedImageLoader{
 
 			const params = {
 				id: tokens[0],
-				x: Number.parseFloat(tokens[1]),
-				y: Number.parseFloat(tokens[2]),
-				z: Number.parseFloat(tokens[3]),
-				omega: Number.parseFloat(tokens[4]),
-				phi: Number.parseFloat(tokens[5]),
-				kappa: Number.parseFloat(tokens[6]),
+				x: Number.parseFloat(tokens[2]),
+				y: Number.parseFloat(tokens[3]),
+				z: Number.parseFloat(tokens[4]),
+				omega: Number.parseFloat(tokens[5]),
+				phi: Number.parseFloat(tokens[6]),
+				kappa: Number.parseFloat(tokens[7]),
 			};
 
 			// const whitelist = ["47518.jpg"];
@@ -230,15 +229,13 @@ export class OrientedImageLoader{
 		return imageParams;
 	}
 
-	static async load(cameraParamsPath, imageParamsPath, viewer){
-
+	static async load(cameraParamsPath, imageParamsPath, viewer, imageUrls){	
 		const tStart = performance.now();
 
 		const [cameraParams, imageParams] = await Promise.all([
 			OrientedImageLoader.loadCameraParams(cameraParamsPath),
 			OrientedImageLoader.loadImageParams(imageParamsPath),
 		]);
-
 		const orientedImageControls = new OrientedImageControls(viewer);
 		const raycaster = new THREE.Raycaster();
 
@@ -270,7 +267,6 @@ export class OrientedImageLoader{
 			const {x, y, z, omega, phi, kappa} = params;
 			// const [rx, ry, rz] = [omega, phi, kappa]
 			// 	.map(THREE.Math.degToRad);
-			
 			// mesh.position.set(x, y, z);
 			// mesh.scale.set(width / height, 1, 1);
 			// mesh.rotation.set(rx, ry, rz);
@@ -419,8 +415,8 @@ export class OrientedImageLoader{
 						}
 					}
 				);
-
-				const imagePath = `${imageParamsPath}/../${target.id}`;
+				const imgId = target.id.split("/").at(-1);
+				const imagePath = imageUrls[imgId];
 				new THREE.TextureLoader().load(imagePath,
 					(texture) => {
 						target.texture = texture;

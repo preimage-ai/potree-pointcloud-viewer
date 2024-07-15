@@ -30,10 +30,11 @@ export class MapView{
 
 	constructor (viewer) {
 		this.viewer = viewer;
-
+		console.log("map view", this);
 		this.webMapService = 'WMTS';
 		this.mapProjectionName = 'EPSG:3857';
 		this.mapProjection = proj4.defs(this.mapProjectionName);
+		console.log("map projection", this.mapProjection);
 		this.sceneProjection = null;
 
 		this.extentsLayer = null;
@@ -100,7 +101,6 @@ export class MapView{
 		if(typeof ol === "undefined"){
 			return;
 		}
-
 		this.elMap = $('#potree_map');
 		this.elMap.draggable({ handle: $('#potree_map_header') });
 		this.elMap.resizable();
@@ -135,7 +135,6 @@ export class MapView{
 			}, false);
 			btToggleTiles.style.float = 'left';
 			btToggleTiles.title = 'show / hide tiles';
-
 			// DOWNLOAD SELECTED TILES
 			let link = document.createElement('a');
 			link.href = '#';
@@ -145,12 +144,10 @@ export class MapView{
 			let button = document.createElement('button');
 			button.innerHTML = 'D';
 			link.appendChild(button);
-
 			let handleDownload = (e) => {
 				let features = selectedFeatures.getArray();
 
 				let url = [document.location.protocol, '//', document.location.host, document.location.pathname].join('');
-
 				if (features.length === 0) {
 					alert('No tiles were selected. Select area with ctrl + left mouse button!');
 					e.preventDefault();
@@ -176,7 +173,6 @@ export class MapView{
 							content += sourceurl.href + '\n';
 						}
 					}
-
 					let uri = 'data:application/octet-stream;base64,' + btoa(content);
 					link.href = uri;
 					link.download = 'list_of_files.txt';
@@ -224,10 +220,9 @@ export class MapView{
 			target: 'potree_map_content',
 			view: new ol.View({
 				center: this.olCenter,
-				zoom: 9
+				zoom: 9,
 			})
 		});
-
 		// DRAGBOX / SELECTION
 		this.dragBoxLayer = new ol.layer.Vector({
 			source: new ol.source.Vector({}),
@@ -242,7 +237,6 @@ export class MapView{
 
 		let select = new ol.interaction.Select();
 		this.map.addInteraction(select);
-
 		let selectedFeatures = select.getFeatures();
 
 		let dragBox = new ol.interaction.DragBox({
@@ -335,7 +329,6 @@ export class MapView{
 			feature.onClick = evt => {
 				annotation.clickTitle();
 			};
-
 			this.getAnnotationsLayer().getSource().addFeature(feature);
 		};
 
@@ -550,17 +543,24 @@ export class MapView{
 
 	setSceneProjection (sceneProjection) {
 		this.sceneProjection = sceneProjection;
-		this.toMap = proj4(this.sceneProjection, this.mapProjection);
-		this.toScene = proj4(this.mapProjection, this.sceneProjection);
+		//preimage: this.toMap = proj4(this.sceneProjection, this.mapProjection);
+		// this.toScene = proj4(this.mapProjection, this.sceneProjection);
+		this.toMap = proj4(this.sceneProjection, this.sceneProjection);
+		this.toScene = proj4(this.sceneProjection, this.sceneProjection);
 	};
 
 	getMapExtent () {
 		let bb = this.viewer.getBoundingBox();
 
-		let bottomLeft = this.toMap.forward([bb.min.x, bb.min.y]);
-		let bottomRight = this.toMap.forward([bb.max.x, bb.min.y]);
-		let topRight = this.toMap.forward([bb.max.x, bb.max.y]);
-		let topLeft = this.toMap.forward([bb.min.x, bb.max.y]);
+		//preimage: let bottomLeft = this.toMap.forward([bb.min.x, bb.min.y]);
+		// let bottomRight = this.toMap.forward([bb.max.x, bb.min.y]);
+		// let topRight = this.toMap.forward([bb.max.x, bb.max.y]);
+		// let topLeft = this.toMap.forward([bb.min.x, bb.max.y]);
+
+		let bottomLeft = [bb.min.x, bb.min.y];
+		let bottomRight = [bb.max.x, bb.min.y];
+		let topRight = [bb.max.x, bb.max.y];
+		let topLeft = [bb.min.x, bb.max.y];
 
 		let extent = {
 			bottomLeft: bottomLeft,
@@ -568,7 +568,6 @@ export class MapView{
 			topRight: topRight,
 			topLeft: topLeft
 		};
-
 		return extent;
 	};
 
@@ -579,7 +578,6 @@ export class MapView{
 			(mapExtent.bottomLeft[0] + mapExtent.topRight[0]) / 2,
 			(mapExtent.bottomLeft[1] + mapExtent.topRight[1]) / 2
 		];
-
 		return mapCenter;
 	};
 
@@ -601,7 +599,6 @@ export class MapView{
 			let feature = new ol.Feature(line);
 			this.toolLayer.getSource().addFeature(feature);
 		}
-
 		let measurements = this.viewer.measuringTool.measurements;
 		for (let i = 0; i < measurements.length; i++) {
 			let measurement = measurements[i];
@@ -609,7 +606,8 @@ export class MapView{
 
 			for (let j = 0; j < measurement.points.length; j++) {
 				let point = measurement.points[j].position;
-				let pointMap = this.toMap.forward([point.x, point.y]);
+				// let pointMap = this.toMap.forward([point.x, point.y]);
+				let pointMap = [point.x, point.y];
 				coordinates.push(pointMap);
 			}
 
@@ -672,13 +670,10 @@ export class MapView{
 				};
 			}
 		}
-
 		let mapExtent = this.getMapExtent();
 		let mapCenter = this.getMapCenter();
-
 		let view = this.map.getView();
 		view.setCenter(mapCenter);
-
 		this.gExtent.setCoordinates([
 			mapExtent.bottomLeft,
 			mapExtent.bottomRight,
@@ -686,7 +681,6 @@ export class MapView{
 			mapExtent.topLeft,
 			mapExtent.bottomLeft
 		]);
-
 		view.fit(this.gExtent, [300, 300], {
 			constrainResolution: false
 		});
@@ -694,13 +688,19 @@ export class MapView{
 		if (pointcloud.pcoGeometry.type == 'ept'){ 
 			return;
 		}
-
-		let url = `${pointcloud.pcoGeometry.url}/../sources.json`;
+		let url = `${pointcloud.pcoGeometry.url}`;
 		//let response = await fetch(url);
 
 		fetch(url).then(async (response) => {
 			let data = await response.json();
-		
+			data.sources = [{
+					name: data.name,
+					points: data.points,
+					bounds: {
+						min: data.boundingBox.min,
+						max: data.boundingBox.max,
+					}
+				}];
 			let sources = data.sources;
 
 			for (let i = 0; i < sources.length; i++) {
@@ -709,18 +709,24 @@ export class MapView{
 				let bounds = source.bounds;
 
 				let mapBounds = {
-					min: this.toMap.forward([bounds.min[0], bounds.min[1]]),
-					max: this.toMap.forward([bounds.max[0], bounds.max[1]])
+					//preimage: min: this.toMap.forward([bounds.min[0], bounds.min[1]]),
+					// max: this.toMap.forward([bounds.max[0], bounds.max[1]])
+					min: [bounds.min[0], bounds.min[1]],
+					max: [bounds.max[0], bounds.max[1]]
 				};
 				let mapCenter = [
 					(mapBounds.min[0] + mapBounds.max[0]) / 2,
 					(mapBounds.min[1] + mapBounds.max[1]) / 2
 				];
-
-				let p1 = this.toMap.forward([bounds.min[0], bounds.min[1]]);
-				let p2 = this.toMap.forward([bounds.max[0], bounds.min[1]]);
-				let p3 = this.toMap.forward([bounds.max[0], bounds.max[1]]);
-				let p4 = this.toMap.forward([bounds.min[0], bounds.max[1]]);
+				//preimage: let p1 = this.toMap.forward([bounds.min[0], bounds.min[1]]);
+				// let p2 = this.toMap.forward([bounds.max[0], bounds.min[1]]);
+				// let p3 = this.toMap.forward([bounds.max[0], bounds.max[1]]);
+				// let p4 = this.toMap.forward([bounds.min[0], bounds.max[1]]);
+				
+				let p1 = [bounds.min[0], bounds.min[1]];
+				let p2 = [bounds.max[0], bounds.min[1]];
+				let p3 = [bounds.max[0], bounds.max[1]];
+				let p4 = [bounds.min[0], bounds.max[1]];
 
 				// let feature = new ol.Feature({
 				//	'geometry': new ol.geom.LineString([p1, p2, p3, p4, p1])

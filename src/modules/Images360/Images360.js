@@ -257,15 +257,14 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, params = {}){
-
+	static async load(url, viewer, imageUrls, params = {}){
+		
 		if(!params.transform){
 			params.transform = {
 				forward: a => a,
 			};
 		}
-		
-		let response = await fetch(`${url}/coordinates.txt`);
+		let response = await fetch(url);
 		let text = await response.text();
 
 		let lines = text.split(/\r?\n/);
@@ -274,14 +273,15 @@ export class Images360Loader{
 		let images360 = new Images360(viewer);
 
 		for(let line of coordinateLines){
-
+			
 			if(line.trim().length === 0){
 				continue;
 			}
 
 			let tokens = line.split(/\t/);
-
+			
 			let [filename, time, long, lat, alt, course, pitch, roll] = tokens;
+			
 			time = parseFloat(time);
 			long = parseFloat(long);
 			lat = parseFloat(lat);
@@ -291,7 +291,8 @@ export class Images360Loader{
 			roll = parseFloat(roll);
 
 			filename = filename.replace(/"/g, "");
-			let file = `${url}/${filename}`;
+			filename = filename.split("/").pop();
+			let file = imageUrls[filename];
 
 			let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
 
