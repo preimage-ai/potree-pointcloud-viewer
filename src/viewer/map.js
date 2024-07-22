@@ -543,24 +543,24 @@ export class MapView{
 
 	setSceneProjection (sceneProjection) {
 		this.sceneProjection = sceneProjection;
-		//preimage: this.toMap = proj4(this.sceneProjection, this.mapProjection);
-		// this.toScene = proj4(this.mapProjection, this.sceneProjection);
-		this.toMap = proj4(this.sceneProjection, this.sceneProjection);
-		this.toScene = proj4(this.sceneProjection, this.sceneProjection);
+		this.toMap = proj4(this.sceneProjection, this.mapProjection);
+		this.toScene = proj4(this.mapProjection, this.sceneProjection);
+		// this.toMap = proj4(this.sceneProjection, this.sceneProjection);
+		// this.toScene = proj4(this.sceneProjection, this.sceneProjection);
 	};
 
 	getMapExtent () {
 		let bb = this.viewer.getBoundingBox();
 
-		//preimage: let bottomLeft = this.toMap.forward([bb.min.x, bb.min.y]);
-		// let bottomRight = this.toMap.forward([bb.max.x, bb.min.y]);
-		// let topRight = this.toMap.forward([bb.max.x, bb.max.y]);
-		// let topLeft = this.toMap.forward([bb.min.x, bb.max.y]);
+		let bottomLeft = this.toMap.forward([bb.min.x, bb.min.y]);
+		let bottomRight = this.toMap.forward([bb.max.x, bb.min.y]);
+		let topRight = this.toMap.forward([bb.max.x, bb.max.y]);
+		let topLeft = this.toMap.forward([bb.min.x, bb.max.y]);
 
-		let bottomLeft = [bb.min.x, bb.min.y];
-		let bottomRight = [bb.max.x, bb.min.y];
-		let topRight = [bb.max.x, bb.max.y];
-		let topLeft = [bb.min.x, bb.max.y];
+		// let bottomLeft = [bb.min.x, bb.min.y];
+		// let bottomRight = [bb.max.x, bb.min.y];
+		// let topRight = [bb.max.x, bb.max.y];
+		// let topLeft = [bb.min.x, bb.max.y];
 
 		let extent = {
 			bottomLeft: bottomLeft,
@@ -606,8 +606,8 @@ export class MapView{
 
 			for (let j = 0; j < measurement.points.length; j++) {
 				let point = measurement.points[j].position;
-				// let pointMap = this.toMap.forward([point.x, point.y]);
-				let pointMap = [point.x, point.y];
+				let pointMap = this.toMap.forward([point.x, point.y]);
+				// let pointMap = [point.x, point.y];
 				coordinates.push(pointMap);
 			}
 
@@ -709,24 +709,24 @@ export class MapView{
 				let bounds = source.bounds;
 
 				let mapBounds = {
-					//preimage: min: this.toMap.forward([bounds.min[0], bounds.min[1]]),
-					// max: this.toMap.forward([bounds.max[0], bounds.max[1]])
-					min: [bounds.min[0], bounds.min[1]],
-					max: [bounds.max[0], bounds.max[1]]
+					min: this.toMap.forward([bounds.min[0], bounds.min[1]]),
+					max: this.toMap.forward([bounds.max[0], bounds.max[1]])
+					// min: [bounds.min[0], bounds.min[1]],
+					// max: [bounds.max[0], bounds.max[1]]
 				};
 				let mapCenter = [
 					(mapBounds.min[0] + mapBounds.max[0]) / 2,
 					(mapBounds.min[1] + mapBounds.max[1]) / 2
 				];
-				//preimage: let p1 = this.toMap.forward([bounds.min[0], bounds.min[1]]);
-				// let p2 = this.toMap.forward([bounds.max[0], bounds.min[1]]);
-				// let p3 = this.toMap.forward([bounds.max[0], bounds.max[1]]);
-				// let p4 = this.toMap.forward([bounds.min[0], bounds.max[1]]);
+				let p1 = this.toMap.forward([bounds.min[0], bounds.min[1]]);
+				let p2 = this.toMap.forward([bounds.max[0], bounds.min[1]]);
+				let p3 = this.toMap.forward([bounds.max[0], bounds.max[1]]);
+				let p4 = this.toMap.forward([bounds.min[0], bounds.max[1]]);
 				
-				let p1 = [bounds.min[0], bounds.min[1]];
-				let p2 = [bounds.max[0], bounds.min[1]];
-				let p3 = [bounds.max[0], bounds.max[1]];
-				let p4 = [bounds.min[0], bounds.max[1]];
+				// let p1 = [bounds.min[0], bounds.min[1]];
+				// let p2 = [bounds.max[0], bounds.min[1]];
+				// let p3 = [bounds.max[0], bounds.max[1]];
+				// let p4 = [bounds.min[0], bounds.max[1]];
 
 				// let feature = new ol.Feature({
 				//	'geometry': new ol.geom.LineString([p1, p2, p3, p4, p1])

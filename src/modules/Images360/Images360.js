@@ -3,7 +3,7 @@ import * as THREE from "../../../libs/three.js/build/three.module.js";
 import { EventDispatcher } from "../../EventDispatcher.js";
 import {TextSprite} from "../../TextSprite.js";
 
-let sg = new THREE.SphereGeometry(1, 8, 8);
+let sg = new THREE.SphereGeometry(0.5, 8, 8);
 let sgHigh = new THREE.SphereGeometry(1, 128, 128);
 
 let sm = new THREE.MeshBasicMaterial({side: THREE.BackSide});
