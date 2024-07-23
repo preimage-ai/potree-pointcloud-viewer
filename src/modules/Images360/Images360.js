@@ -133,13 +133,16 @@ export class Images360 extends EventDispatcher{
 		});
 
 		{ // orientation
-			let {course, pitch, roll} = image360;
+			let {rot_x, rot_y, rot_z} = image360;
 			this.sphere.rotation.set(
-				THREE.Math.degToRad(+roll + 90),
-				THREE.Math.degToRad(-pitch),
-				THREE.Math.degToRad(-course + 90),
+				THREE.Math.degToRad(90),
+				THREE.Math.degToRad(-90),
+				THREE.Math.degToRad(90),
 				"ZYX"
 			);
+			let axis = new THREE.Vector3(rot_x, rot_y, rot_z).normalize();
+			let angle = Math.sqrt(rot_x*rot_x + rot_y*rot_y + rot_z*rot_z);
+			this.sphere.rotateOnWorldAxis(axis, angle);
 		}
 
 		this.sphere.position.set(...image360.position);
@@ -323,13 +326,16 @@ export class Images360Loader{
 			mesh.image360 = image360;
 
 			{ // orientation
-				var {course, pitch, roll} = image360;
+				let {rot_x, rot_y, rot_z} = image360;
 				mesh.rotation.set(
-					THREE.Math.degToRad(+roll + 90),
-					THREE.Math.degToRad(-pitch),
-					THREE.Math.degToRad(-course + 90),
+					THREE.Math.degToRad(90),
+					THREE.Math.degToRad(-90),
+					THREE.Math.degToRad(90),
 					"ZYX"
 				);
+				let axis = new THREE.Vector3(rot_x, rot_y, rot_z).normalize();
+				let angle = Math.sqrt(rot_x*rot_x + rot_y*rot_y + rot_z*rot_z);
+				mesh.rotateOnWorldAxis(axis, angle);
 			}
 
 			images360.node.add(mesh);
