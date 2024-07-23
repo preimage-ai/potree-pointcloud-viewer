@@ -26,9 +26,9 @@ class Image360{
 		this.longitude = longitude;
 		this.latitude = latitude;
 		this.altitude = altitude;
-		this.course = course;
-		this.pitch = pitch;
-		this.roll = roll;
+		this.rot_x = course;
+		this.rot_y = pitch;
+		this.rot_z = roll;
 		this.mesh = null;
 	}
 };
@@ -296,6 +296,57 @@ export class Images360Loader{
 			filename = filename.replace(/"/g, "");
 			filename = filename.split("/").pop();
 			let file = imageUrls[filename];
+
+			let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
+
+			let xy = params.transform.forward([long, lat]);
+			let position = [...xy, alt];
+			image360.position = position;
+
+			images360.images.push(image360);
+		}
+
+		Images360Loader.createSceneNodes(images360, params.transform);
+
+		return images360;
+
+	}
+
+	static async testload(url, viewer, params = {}){
+
+		if(!params.transform){
+			params.transform = {
+				forward: a => a,
+			};
+		}
+		
+		let response = await fetch(`${url}/coordinates.txt`);
+		let text = await response.text();
+
+		let lines = text.split(/\r?\n/);
+		let coordinateLines = lines.slice(1);
+
+		let images360 = new Images360(viewer);
+
+		for(let line of coordinateLines){
+
+			if(line.trim().length === 0){
+				continue;
+			}
+
+			let tokens = line.split(/\t/);
+
+			let [filename, time, long, lat, alt, course, pitch, roll] = tokens;
+			time = parseFloat(time);
+			long = parseFloat(long);
+			lat = parseFloat(lat);
+			alt = parseFloat(alt);
+			course = parseFloat(course);
+			pitch = parseFloat(pitch);
+			roll = parseFloat(roll);
+
+			filename = filename.replace(/"/g, "");
+			let file = `${url}/${filename}`;
 
 			let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
 

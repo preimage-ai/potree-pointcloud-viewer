@@ -31,9 +31,8 @@
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
 		<div id="potree_render_area" style="background-image: url('../../build/potree/resources/images/background.jpg');">
-		
 		</div>
-		<div id="potree_sidebar_container"> </div>
+		<div id="potree_sidebar_container"></div>
 	</div>
 	
 	<script type="module">
@@ -52,12 +51,23 @@
 		
 		viewer.loadGUI(() => {
 			viewer.setLanguage('en');
-			$("#menu_appearance").next().show();
+			// $("#menu_appearance").next().show();
 			viewer.toggleSidebar();
+			// viewer.toggleMap();
 		});
-		
+
+
+		// keep your 360 data in example folder by potree name
+		const url = 'potree/metadata.json';
+        const hierarchyUrl = 'potree/hierarchy.bin';
+        const octreeUrl = 'potree/octree.bin';
+        const otherPath = {
+            octree: octreeUrl,
+            hierarchy: hierarchyUrl,
+        };
+
 		// Load and add point cloud to scene
-		Potree.loadPointCloud("http://5.9.65.151/mschuetz/potree/resources/pointclouds/helimap/360/MLS_drive1/cloud.js", "MLS", e => {
+		Potree.loadPointCloud(url, otherPath, "MLS", e => {
 			let scene = viewer.scene;
 			let pointcloud = e.pointcloud;
 			
@@ -70,12 +80,8 @@
 			
 			scene.addPointCloud(pointcloud);
 
-			viewer.scene.view.setView(
-				[2652381.103, 1249049.447, 411.636],
-				[2652364.407, 1249077.205, 399.696],
-			);
-
 			run();
+			
 		});
 
 		async function run(){
@@ -88,11 +94,11 @@
 				transform: transform
 			};
 
-			// this file contains coordinates, orientation and filenames of the images:
-			// http://5.9.65.151/mschuetz/potree/resources/pointclouds/helimap/360/Drive2_selection/coordinates.txt
-			Potree.Images360Loader.load("http://5.9.65.151/mschuetz/potree/resources/pointclouds/helimap/360/Drive2_selection", viewer, params).then( images => {
+			// potree folder contains coordinates.txt
+			Potree.Images360Loader.testload('potree', viewer, params).then( images => {
 				viewer.scene.add360Images(images);
 			});
+			
 
 			viewer.mapView.showSources(false);
 		}
