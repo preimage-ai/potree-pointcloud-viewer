@@ -79,6 +79,11 @@ export class Images360 extends EventDispatcher{
 				this.focus(currentlyHovered.image360);
 			}
 		});
+		this.addEventListener("touchend", () => {
+			if(currentlyHovered && currentlyHovered.image360){
+				this.focus(currentlyHovered.image360);
+			}
+		});
 		
 	};
 

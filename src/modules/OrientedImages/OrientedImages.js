@@ -305,6 +305,7 @@ export class OrientedImageLoader{
 		let clipVolume = null;
 
 		const onMouseMove = (evt) => {
+			
 			const tStart = performance.now();
 			if(hoveredElement){
 				hoveredElement.line.material.color.setRGB(0, 1, 0);
@@ -318,6 +319,7 @@ export class OrientedImageLoader{
 				( x - rect.left ) / rect.width, 
 				( y - rect.top ) / rect.height 
 			];
+			
 			const onClickPosition = new THREE.Vector2(...array);
 			//const intersects = getIntersects(onClickPosition, scene.children);
 			const camera = viewer.scene.getActiveCamera();
@@ -330,7 +332,7 @@ export class OrientedImageLoader{
 			let selectionChanged = false;
 
 			if ( intersects.length > 0){
-				//console.log(intersects);
+				console.log(intersects);
 				const intersection = intersects[0];
 				const orientedImage = intersection.object.orientedImage;
 				orientedImage.line.material.color.setRGB(1, 0, 0);
@@ -434,13 +436,104 @@ export class OrientedImageLoader{
 			if(orientedImageControls.hasSomethingCaptured()){
 				return;
 			}
-
+			
 			if(hoveredElement){
 				moveToImage(hoveredElement);
 			}
 		};
+
+		const onTouchStart = (evt) => {
+			console.log("onMouseMove", evt);
+			const tStart = performance.now();
+			if(hoveredElement){
+				hoveredElement.line.material.color.setRGB(0, 1, 0);
+			}
+			evt.preventDefault();
+
+			//var array = getMousePosition( container, evt.clientX, evt.clientY );
+			const rect = viewer.renderer.domElement.getBoundingClientRect();
+			const [x, y] = [evt.touches[0].clientX, evt.touches[0].clientY];
+			const array = [ 
+				( x - rect.left ) / rect.width, 
+				( y - rect.top ) / rect.height 
+			];
+			console.log("array", array);
+			const onClickPosition = new THREE.Vector2(...array);
+			//const intersects = getIntersects(onClickPosition, scene.children);
+			const camera = viewer.scene.getActiveCamera();
+			const mouse = new THREE.Vector3(
+				+ ( onClickPosition.x * 2 ) - 1, 
+				- ( onClickPosition.y * 2 ) + 1 );
+			const objects = orientedImages.map(i => i.mesh);
+			raycaster.setFromCamera( mouse, camera );
+			const intersects = raycaster.intersectObjects( objects );
+			let selectionChanged = false;
+
+			if ( intersects.length > 0){
+				console.log(intersects);
+				const intersection = intersects[0];
+				const orientedImage = intersection.object.orientedImage;
+				orientedImage.line.material.color.setRGB(1, 0, 0);
+				selectionChanged = hoveredElement !== orientedImage;
+				hoveredElement = orientedImage;
+			}else{
+				hoveredElement = null;
+			}
+
+			let shouldRemoveClipVolume = clipVolume !== null && hoveredElement === null;
+			let shouldAddClipVolume = clipVolume === null && hoveredElement !== null;
+
+			if(clipVolume !== null && (hoveredElement === null || selectionChanged)){
+				// remove existing
+				viewer.scene.removePolygonClipVolume(clipVolume);
+				clipVolume = null;
+			}
+			
+			if(shouldAddClipVolume || selectionChanged){
+				const img = hoveredElement;
+				const fov = cameraParams.fov;
+				const aspect  = cameraParams.width / cameraParams.height;
+				const near = 1.0;
+				const far = 1000 * 1000;
+				const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+				camera.rotation.order = viewer.scene.getActiveCamera().rotation.order;
+				camera.rotation.copy(img.mesh.rotation);
+				{
+					const mesh = img.mesh;
+					const dir = mesh.getWorldDirection();
+					const pos = mesh.position;
+					const alpha = THREE.Math.degToRad(fov / 2);
+					const d = 0.5 / Math.tan(alpha);
+					const newCamPos = pos.clone().add(dir.clone().multiplyScalar(d));
+					const newCamDir = pos.clone().sub(newCamPos);
+					const newCamTarget = new THREE.Vector3().addVectors(
+						newCamPos,
+						newCamDir.clone().multiplyScalar(viewer.getMoveSpeed()));
+					camera.position.copy(newCamPos);
+				}
+				let volume = new Potree.PolygonClipVolume(camera);
+				let m0 = new THREE.Mesh();
+				let m1 = new THREE.Mesh();
+				let m2 = new THREE.Mesh();
+				let m3 = new THREE.Mesh();
+				m0.position.set(-1, -1, 0);
+				m1.position.set( 1, -1, 0);
+				m2.position.set( 1,  1, 0);
+				m3.position.set(-1,  1, 0);
+				volume.markers.push(m0, m1, m2, m3);
+				volume.initialized = true;
+				
+				viewer.scene.addPolygonClipVolume(volume);
+				clipVolume = volume;
+			}
+			const tEnd = performance.now();
+			//console.log(tEnd - tStart);
+		};
+
 		viewer.renderer.domElement.addEventListener( 'mousemove', onMouseMove, false );
 		viewer.renderer.domElement.addEventListener( 'mousedown', onMouseClick, false );
+		viewer.renderer.domElement.addEventListener( 'touchstart', onTouchStart, false );
+		viewer.renderer.domElement.addEventListener( 'touchend', onMouseClick, false );
 
 		viewer.addEventListener("update", () => {
 
