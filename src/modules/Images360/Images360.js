@@ -3,7 +3,7 @@ import * as THREE from "../../../libs/three.js/build/three.module.js";
 import { EventDispatcher } from "../../EventDispatcher.js";
 import {TextSprite} from "../../TextSprite.js";
 
-let sg = new THREE.SphereGeometry(1, 8, 8);
+let sg = new THREE.SphereGeometry(0.5, 8, 8);
 let sgHigh = new THREE.SphereGeometry(1, 128, 128);
 
 let sm = new THREE.MeshBasicMaterial({side: THREE.BackSide});
@@ -26,9 +26,9 @@ class Image360{
 		this.longitude = longitude;
 		this.latitude = latitude;
 		this.altitude = altitude;
-		this.course = course;
-		this.pitch = pitch;
-		this.roll = roll;
+		this.rot_x = course;
+		this.rot_y = pitch;
+		this.rot_z = roll;
 		this.mesh = null;
 	}
 };
@@ -79,6 +79,11 @@ export class Images360 extends EventDispatcher{
 				this.focus(currentlyHovered.image360);
 			}
 		});
+		this.addEventListener("touchend", () => {
+			if(currentlyHovered && currentlyHovered.image360){
+				this.focus(currentlyHovered.image360);
+			}
+		});
 		
 	};
 
@@ -112,7 +117,7 @@ export class Images360 extends EventDispatcher{
 		previousView = {
 			controls: this.viewer.controls,
 			position: this.viewer.scene.view.position.clone(),
-			target: viewer.scene.view.getPivot(),
+			target: this.viewer.scene.view.getPivot(),
 		};
 
 		this.viewer.setControls(this.viewer.orbitControls);
@@ -133,23 +138,26 @@ export class Images360 extends EventDispatcher{
 		});
 
 		{ // orientation
-			let {course, pitch, roll} = image360;
+			let {rot_x, rot_y, rot_z} = image360;
 			this.sphere.rotation.set(
-				THREE.Math.degToRad(+roll + 90),
-				THREE.Math.degToRad(-pitch),
-				THREE.Math.degToRad(-course + 90),
+				THREE.Math.degToRad(90),
+				THREE.Math.degToRad(-90),
+				THREE.Math.degToRad(90),
 				"ZYX"
 			);
+			let axis = new THREE.Vector3(rot_x, rot_y, rot_z).normalize();
+			let angle = Math.sqrt(rot_x*rot_x + rot_y*rot_y + rot_z*rot_z);
+			this.sphere.rotateOnWorldAxis(axis, angle);
 		}
 
 		this.sphere.position.set(...image360.position);
 
 		let target = new THREE.Vector3(...image360.position);
-		let dir = target.clone().sub(viewer.scene.view.position).normalize();
+		let dir = target.clone().sub(this.viewer.scene.view.position).normalize();
 		let move = dir.multiplyScalar(0.000001);
 		let newCamPos = target.clone().sub(move);
 
-		viewer.scene.view.setView(
+		this.viewer.scene.view.setView(
 			newCamPos, 
 			target,
 			500
@@ -178,16 +186,16 @@ export class Images360 extends EventDispatcher{
 		this.sphere.material.needsUpdate = true;
 		this.sphere.visible = false;
 
-		let pos = viewer.scene.view.position;
-		let target = viewer.scene.view.getPivot();
+		let pos = this.viewer.scene.view.position;
+		let target = this.viewer.scene.view.getPivot();
 		let dir = target.clone().sub(pos).normalize();
 		let move = dir.multiplyScalar(10);
 		let newCamPos = target.clone().sub(move);
 
-		viewer.orbitControls.doubleClockZoomEnabled = true;
-		viewer.setControls(previousView.controls);
+		this.viewer.orbitControls.doubleClockZoomEnabled = true;
+		this.viewer.setControls(previousView.controls);
 
-		viewer.scene.view.setView(
+		this.viewer.scene.view.setView(
 			previousView.position, 
 			previousView.target,
 			500
@@ -212,9 +220,9 @@ export class Images360 extends EventDispatcher{
 	}
 
 	handleHovering(){
-		let mouse = viewer.inputHandler.mouse;
-		let camera = viewer.scene.getActiveCamera();
-		let domElement = viewer.renderer.domElement;
+		let mouse = this.viewer.inputHandler.mouse;
+		let camera = this.viewer.scene.getActiveCamera();
+		let domElement = this.viewer.renderer.domElement;
 
 		let ray = Potree.Utils.mouseToRay(mouse, camera, domElement.clientWidth, domElement.clientHeight);
 
@@ -249,7 +257,7 @@ export class Images360 extends EventDispatcher{
 		if(this.selectingEnabled){
 			this.handleHovering();
 		}
-
+		
 	}
 
 };
@@ -257,7 +265,59 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, params = {}){
+	static async load(url, viewer, imageUrls, params = {}){
+		
+		if(!params.transform){
+			params.transform = {
+				forward: a => a,
+			};
+		}
+		let response = await fetch(url);
+		let text = await response.text();
+
+		let lines = text.split(/\r?\n/);
+		let coordinateLines = lines.slice(1);
+
+		let images360 = new Images360(viewer);
+
+		for(let line of coordinateLines){
+			
+			if(line.trim().length === 0){
+				continue;
+			}
+
+			let tokens = line.split(/\t/);
+			
+			let [filename, time, long, lat, alt, course, pitch, roll] = tokens;
+			
+			time = parseFloat(time);
+			long = parseFloat(long);
+			lat = parseFloat(lat);
+			alt = parseFloat(alt);
+			course = parseFloat(course);
+			pitch = parseFloat(pitch);
+			roll = parseFloat(roll);
+
+			filename = filename.replace(/"/g, "");
+			filename = filename.split("/").pop();
+			let file = imageUrls[filename];
+
+			let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
+
+			let xy = params.transform.forward([long, lat]);
+			let position = [...xy, alt];
+			image360.position = position;
+
+			images360.images.push(image360);
+		}
+
+		Images360Loader.createSceneNodes(images360, params.transform);
+
+		return images360;
+
+	}
+
+	static async testload(url, viewer, params = {}){
 
 		if(!params.transform){
 			params.transform = {
@@ -322,13 +382,16 @@ export class Images360Loader{
 			mesh.image360 = image360;
 
 			{ // orientation
-				var {course, pitch, roll} = image360;
+				let {rot_x, rot_y, rot_z} = image360;
 				mesh.rotation.set(
-					THREE.Math.degToRad(+roll + 90),
-					THREE.Math.degToRad(-pitch),
-					THREE.Math.degToRad(-course + 90),
+					THREE.Math.degToRad(90),
+					THREE.Math.degToRad(-90),
+					THREE.Math.degToRad(90),
 					"ZYX"
 				);
+				let axis = new THREE.Vector3(rot_x, rot_y, rot_z).normalize();
+				let angle = Math.sqrt(rot_x*rot_x + rot_y*rot_y + rot_z*rot_z);
+				mesh.rotateOnWorldAxis(axis, angle);
 			}
 
 			images360.node.add(mesh);
