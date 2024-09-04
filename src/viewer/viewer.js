@@ -1,5 +1,6 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
+import { IFCLoader } from "../../libs/three.js/extra/IFCLoader.js";
 import {ClipTask, ClipMethod, CameraMode, LengthUnits, ElevationGradientRepeat} from "../defines.js";
 import {Renderer} from "../PotreeRenderer.js";
 import {PotreeRenderer} from "./PotreeRenderer.js";
@@ -2315,4 +2316,5 @@ export class Viewer extends EventDispatcher{
 
 		return message;
 	}
+
 };

@@ -30,18 +30,17 @@
 	
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
-		<div id="potree_render_area" style="background-image: url('../../build/potree/resources/images/background.jpg');">
-		</div>
-		<div id="potree_sidebar_container"></div>
+		<div id="potree_render_area" style="background-image: url('../../build/potree/resources/images/background.jpg');"> </div>
+        <div id="potree_sidebar_container"></div>
 	</div>
 	
 	<script type="module">
 
 	import * as THREE from "../libs/three.js/build/three.module.js";
-	import { IFCLoader } from "../libs/three.js/extra/IFCLoader.js"
-	
+	import { IFCLoader } from "../libs/three.js/extra/IFCLoader.js";
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
-		
+		const ifc = new Potree.IFC(viewer);
+		console.log(ifc);
 		viewer.setEDLEnabled(true);
 		viewer.setFOV(60);
 		viewer.setPointBudget(2_000_000);
@@ -49,13 +48,12 @@
 		viewer.setDescription(`Mobile LIDAR with 360 degree image overlays. 
 		Click on a sphere to enter 360 view. Click "unfocus" to leave 360 view. <br>
 		Point cloud courtesy of <a href="http://www.helimap.com/">Helimap System SA</a>. Images were downsized for this online demo; Original size is 8000x400.`);
-		
 		viewer.loadGUI(() => {
-			viewer.setLanguage('en');
-			// $("#menu_appearance").next().show();
-			// viewer.toggleSidebar();
-			// viewer.toggleMap();
-		});
+            viewer.setLanguage('en');
+            // $("#menu_appearance").next().show();
+            // viewer.toggleMap();
+            viewer.toggleSidebar();
+        });
 
 		// keep your 360 data in example folder by potree name
 		const url = 'potree/metadata.json';
@@ -67,7 +65,7 @@
         };
 
 		// Load and add point cloud to scene
-		Potree.loadPointCloud(url, otherPath, "bj", e => {
+		Potree.loadPointCloud("../pointclouds/demo/cloud.js",undefined, "bj", e => {
 			let scene = viewer.scene;
 			let pointcloud = e.pointcloud;
 			
@@ -80,34 +78,21 @@
 			
 			scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
-
-			run();
 			
 		});
-
-		async function run(){
-
-			proj4.defs("WGS84", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-			proj4.defs("pointcloud", viewer.getProjection());
-			let transform = proj4("WGS84", "pointcloud");
-
-			let params = {
-				transform: transform
-			};
-
-			// potree folder contains coordinates.txt
-			Potree.Images360Loader.testload('potree', viewer, params).then( images => {
-				viewer.scene.add360Images(images);
-			});
+		// const ifcLoader = new IFCLoader();
+		// ifcLoader.ifcManager.setWasmPath('../libs/three.js/extra/ifc/');
+		// ifcLoader.load('../pointclouds/Project1.ifc', function (model) {
+		// 	model.mesh.rotateX(Math.PI * 0.5);
+		// 	model.scale.multiplyScalar(0.3048);
+		// 	console.log(scene);
+		// 	scene.add(model.mesh);
 			
+		// });
 
-			viewer.mapView.showSources(false);
-		}
-
-
+		ifc.load('../pointclouds/Project1.ifc');
 		
 	</script>
-	
 	
   </body>
 </html>

@@ -402,6 +402,7 @@ export class Sidebar{
 		}
 
 		let pcID = tree.jstree('create_node', "#", { "text": "<b>Point Clouds</b>", "id": "pointclouds"}, "last", false, false);
+		let ifcID = tree.jstree('create_node', "#", { "text": "<b>IFC</b>", "id": "ifc"}, "last", false, false);
 		let measurementID = tree.jstree('create_node', "#", { "text": "<b>Measurements</b>", "id": "measurements" }, "last", false, false);
 		let annotationsID = tree.jstree('create_node', "#", { "text": "<b>Annotations</b>", "id": "annotations" }, "last", false, false);
 		let otherID = tree.jstree('create_node', "#", { "text": "<b>Other</b>", "id": "other" }, "last", false, false);
@@ -409,6 +410,7 @@ export class Sidebar{
 		let imagesID = tree.jstree('create_node', "#", { "text": "<b> Images</b>", "id": "images" }, "last", false, false);
 
 		tree.jstree("check_node", pcID);
+		tree.jstree("check_node", ifcID);
 		tree.jstree("check_node", measurementID);
 		tree.jstree("check_node", annotationsID);
 		tree.jstree("check_node", otherID);
@@ -564,6 +566,21 @@ export class Sidebar{
 			});
 		};
 
+		let onIfcAdded = (e) => {
+			console.log("onIfcAdded", e);
+			let ifc = e.ifc;
+			let icon = `${Potree.resourcePath}/icons/file_las_3d.svg`;
+			let node = createNode(ifcID, ifc.name, icon, ifc);
+
+			ifc.addEventListener("visibility_changed", () => {
+				if(ifc.visible){
+					tree.jstree('check_node', node);
+				}else{
+					tree.jstree('uncheck_node', node);
+				}
+			});
+		};
+
 		let onMeasurementAdded = (e) => {
 			let measurement = e.measurement;
 			let icon = Utils.getMeasurementIcon(measurement);
@@ -666,6 +683,7 @@ export class Sidebar{
 		};
 
 		this.viewer.scene.addEventListener("pointcloud_added", onPointCloudAdded);
+		this.viewer.scene.addEventListener("ifc_added", onIfcAdded);
 		this.viewer.scene.addEventListener("measurement_added", onMeasurementAdded);
 		this.viewer.scene.addEventListener("profile_added", onProfileAdded);
 		this.viewer.scene.addEventListener("volume_added", onVolumeAdded);
@@ -724,6 +742,9 @@ export class Sidebar{
 		for(let pointcloud of scene.pointclouds){
 			onPointCloudAdded({pointcloud: pointcloud});
 		}
+		for(let ifc of scene.ifc){
+			onIfcAdded({ifc: ifc});
+		}
 
 		for(let measurement of scene.measurements){
 			onMeasurementAdded({measurement: measurement});
@@ -761,6 +782,7 @@ export class Sidebar{
 			propertiesPanel.setScene(e.scene);
 
 			e.oldScene.removeEventListener("pointcloud_added", onPointCloudAdded);
+			e.oldScene.removeEventListener("ifc_added", onIfcAdded);
 			e.oldScene.removeEventListener("measurement_added", onMeasurementAdded);
 			e.oldScene.removeEventListener("profile_added", onProfileAdded);
 			e.oldScene.removeEventListener("volume_added", onVolumeAdded);
@@ -768,6 +790,7 @@ export class Sidebar{
 			e.oldScene.removeEventListener("measurement_removed", onMeasurementRemoved);
 
 			e.scene.addEventListener("pointcloud_added", onPointCloudAdded);
+			e.scene.addEventListener("ifc_added", onIfcAdded);
 			e.scene.addEventListener("measurement_added", onMeasurementAdded);
 			e.scene.addEventListener("profile_added", onProfileAdded);
 			e.scene.addEventListener("volume_added", onVolumeAdded);

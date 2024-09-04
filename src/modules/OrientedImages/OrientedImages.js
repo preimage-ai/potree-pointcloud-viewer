@@ -332,7 +332,7 @@ export class OrientedImageLoader{
 			let selectionChanged = false;
 
 			if ( intersects.length > 0){
-				console.log(intersects);
+				// console.log(intersects);
 				const intersection = intersects[0];
 				const orientedImage = intersection.object.orientedImage;
 				orientedImage.line.material.color.setRGB(1, 0, 0);
@@ -443,7 +443,6 @@ export class OrientedImageLoader{
 		};
 
 		const onTouchStart = (evt) => {
-			console.log("onMouseMove", evt);
 			const tStart = performance.now();
 			if(hoveredElement){
 				hoveredElement.line.material.color.setRGB(0, 1, 0);
@@ -457,7 +456,6 @@ export class OrientedImageLoader{
 				( x - rect.left ) / rect.width, 
 				( y - rect.top ) / rect.height 
 			];
-			console.log("array", array);
 			const onClickPosition = new THREE.Vector2(...array);
 			//const intersects = getIntersects(onClickPosition, scene.children);
 			const camera = viewer.scene.getActiveCamera();
