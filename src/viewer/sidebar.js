@@ -551,7 +551,6 @@ export class Sidebar{
 			}
 		});
 
-
 		let onPointCloudAdded = (e) => {
 			let pointcloud = e.pointcloud;
 			let cloudIcon = `${Potree.resourcePath}/icons/cloud.svg`;
@@ -571,7 +570,6 @@ export class Sidebar{
 			let ifc = e.ifc;
 			let icon = `${Potree.resourcePath}/icons/file_las_3d.svg`;
 			let node = createNode(ifcID, ifc.name, icon, ifc);
-
 			ifc.addEventListener("visibility_changed", () => {
 				if(ifc.visible){
 					tree.jstree('check_node', node);
@@ -799,7 +797,6 @@ export class Sidebar{
 		});
 
 	}
-
 	initClippingTool(){
 
 

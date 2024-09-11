@@ -30,8 +30,8 @@
 	
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
-            <div id="potree_render_area" style="background-image: url('../../build/potree/resources/images/background.jpg'); position: absolute; width: 50%; height: 100%; left: 0px; top: 0px;"> </div>
-            <div id="potree_render_area_2" style="background-image: url('../../build/potree/resources/images/background.jpg'); position: absolute; width: 50%; height: 100%; right: 0px; top: 0px;"></div> 
+            <div id="potree_render_area" style="background-image: url('../../build/potree/resources/images/background.jpg');"> </div>
+            <!-- <div id="potree_render_area_2" style="background-image: url('../../build/potree/resources/images/background.jpg'); position: absolute; width: 50%; height: 100%; right: 0px; top: 0px;"></div>  -->
         <div id="potree_sidebar_container"></div>
 	</div>
 	
@@ -41,9 +41,11 @@
 	import { IFCLoader } from "../libs/three.js/extra/IFCLoader.js";
         // window.mainViewer = new Potree.Viewer(document.getElementById("potree_render_area_main"));
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
-        window.viewer2 = new Potree.Viewer(document.getElementById("potree_render_area_2"));
+        // window.viewer2 = new Potree.Viewer(document.getElementById("potree_render_area_2"));
+		const ifc = new Potree.IFC(viewer);
 
-        console.log("viewer", window);
+        console.log("viewer", window.viewer);
+		console.log("Potree", Potree);
 
         // mainViewer.setEDLEnabled(true);
         // mainViewer.setFOV(60);
@@ -65,7 +67,12 @@
 		viewer.setDescription(`Mobile LIDAR with 360 degree image overlays. 
 		Click on a sphere to enter 360 view. Click "unfocus" to leave 360 view. <br>
 		Point cloud courtesy of <a href="http://www.helimap.com/">Helimap System SA</a>. Images were downsized for this online demo; Original size is 8000x400.`);
-		
+		viewer.loadGUI(() => {
+			viewer.setLanguage('en');
+			// $("#menu_appearance").next().show();
+			viewer.toggleSidebar();
+			// viewer.toggleMap();
+		});
 		
 
         // viewer2.setEDLEnabled(true);
@@ -99,8 +106,8 @@
         };
 
 		// Load and add point cloud to scene
-		Potree.loadPointCloud("../pointclouds/demo/cloud.js",undefined, "bj", e => {
-			let scene = viewer.scene;
+		Potree.loadPointCloud("../pointclouds/demo/cloud.js",undefined, "ptcld", e => {
+			// let scene1 = viewer.scene;
 			let pointcloud = e.pointcloud;
 			
 			let material = pointcloud.material;
@@ -110,33 +117,32 @@
 			material.shape = Potree.PointShape.SQUARE;
 			material.activeAttributeName = "rgba";
 			
-			scene.addPointCloud(pointcloud);
+			viewer.scene.addPointCloud(pointcloud);
+			viewer.scene2.addPointCloud(pointcloud);
 			viewer.fitToScreen();
-			
 		});
-		const ifcLoader = new IFCLoader();
-		ifcLoader.ifcManager.setWasmPath('../libs/three.js/extra/ifc/');
-		ifcLoader.load('../pointclouds/Project1.ifc', function (model) {
-			model.mesh.rotateX(Math.PI * 0.5);
-			model.scale.multiplyScalar(0.3048);
-			scene.add(model.mesh);
-			
-		});
+	
 
-        Potree.loadPointCloud("../pointclouds/demo/cloud.js",undefined, "bj", e => {
-			let scene = viewer2.scene;
-			let pointcloud = e.pointcloud;
+		// Potree.loadPointCloud("../pointclouds/demo/cloud.js",undefined, "split-ptcld", e => {
+		// 	// let scene2 = viewer.scene2;
+		// 	let pointcloud = e.pointcloud;
+		// 	console.log("pointcloud split", pointcloud);
+		// 	let material = pointcloud.material;
+		// 	material.size = 0.5;
+		// 	material.minSize = 2.0;
+		// 	material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+		// 	material.shape = Potree.PointShape.SQUARE;
+		// 	material.activeAttributeName = "rgba";
 			
-			let material = pointcloud.material;
-			material.size = 0.5;
-			material.minSize = 2.0;
-			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-			material.shape = Potree.PointShape.SQUARE;
-			material.activeAttributeName = "rgba";
-			
-			scene.addPointCloud(pointcloud);
-			
-		});
+		// 	viewer.scene2.addPointCloud(pointcloud);
+		// 	viewer.fitToScreen();
+		// });
+		console.log("viewer", viewer);
+		ifc.load('../pointclouds/Project1.ifc');
+
+        viewer.splitPane();
+		viewer.splitPaneResize(viewer.renderArea.clientWidth / 3);
+
 		
 	</script>
 	

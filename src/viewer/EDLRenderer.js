@@ -339,5 +339,159 @@ export class EDLRenderer{
 		viewer.dispatchEvent({type: "render.pass.end",viewer: viewer});
 
 	}
+
+	splitRender(params){
+		this.initEDL();
+		const viewer = this.viewer;
+		let camera = params.camera ? params.camera : viewer.scene2.getActiveCamera();
+		const {width, height} = this.viewer.renderer.getSize(new THREE.Vector2());
+
+		viewer.dispatchEvent({type: "render.pass.begin",viewer: viewer});
+		
+		this.resize(width, height);
+
+		const visiblePointClouds = viewer.scene2.pointclouds.filter(pc => pc.visible);
+
+		if(this.screenshot){
+			let oldBudget = Potree.pointBudget;
+			Potree.pointBudget = Math.max(10 * 1000 * 1000, 2 * oldBudget);
+			let result = Potree.updatePointClouds(
+				viewer.scene2.pointclouds, 
+				camera, 
+				viewer.renderer);
+			Potree.pointBudget = oldBudget;
+		}
+
+		let lights = [];
+		viewer.scene2.scene.traverse(node => {
+			if(node.type === "SpotLight"){
+				lights.push(node);
+			}
+		});
+
+		if(viewer.background === "skybox"){
+			viewer.skybox.camera.rotation.copy(viewer.scene2.cameraP.rotation);
+			viewer.skybox.camera.fov = viewer.scene2.cameraP.fov;
+			viewer.skybox.camera.aspect = viewer.scene2.cameraP.aspect;
+
+			viewer.skybox.parent.rotation.x = 0;
+			viewer.skybox.parent.updateMatrixWorld();
+
+			viewer.skybox.camera.updateProjectionMatrix();
+			viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
+		} else if (viewer.background === 'gradient') {
+			viewer.renderer.render(viewer.scene2.sceneBG, viewer.scene2.cameraBG);
+		} 
+
+		//TODO adapt to multiple lights
+		this.renderShadowMap(visiblePointClouds, camera, lights);
+
+		{ // COLOR & DEPTH PASS
+			for (let pointcloud of visiblePointClouds) {
+				let octreeSize = pointcloud.pcoGeometry.boundingBox.getSize(new THREE.Vector3()).x;
+
+				let material = pointcloud.material;
+				material.weighted = false;
+				material.useLogarithmicDepthBuffer = false;
+				material.useEDL = true;
+
+				material.screenWidth = width;
+				material.screenHeight = height;
+				material.uniforms.visibleNodes.value = pointcloud.material.visibleNodesTexture;
+				material.uniforms.octreeSize.value = octreeSize;
+				material.spacing = pointcloud.pcoGeometry.spacing; // * Math.max(pointcloud.scale.x, pointcloud.scale.y, pointcloud.scale.z);
+			}
+			
+			// TODO adapt to multiple lights
+			viewer.renderer.setRenderTarget(this.rtEDL);
+			
+			if(lights.length > 0){
+				viewer.pRenderer.render(viewer.scene2.scenePointCloud, camera, this.rtEDL, {
+					clipSpheres: viewer.scene2.volumes.filter(v => (v instanceof SphereVolume)),
+					shadowMaps: [this.shadowMap],
+					transparent: false,
+				});
+			}else{
+
+				
+				// let test = camera.clone();
+				// test.matrixAutoUpdate = false;
+
+				// //test.updateMatrixWorld = () => {};
+
+				// let mat = new THREE.Matrix4().set(
+				// 	1, 0, 0, 0,
+				// 	0, 0, 1, 0,
+				// 	0, -1, 0, 0,
+				// 	0, 0, 0, 1,
+				// );
+				// mat.invert()
+
+				// test.matrix.multiplyMatrices(mat, test.matrix);
+				// test.updateMatrixWorld();
+
+				//test.matrixWorld.multiplyMatrices(mat, test.matrixWorld);
+				//test.matrixWorld.multiply(mat);
+				//test.matrixWorldInverse.invert(test.matrixWorld);
+				//test.matrixWorldInverse.multiplyMatrices(test.matrixWorldInverse, mat);
+				
+
+				viewer.pRenderer.render(viewer.scene2.scenePointCloud, camera, this.rtEDL, {
+					clipSpheres: viewer.scene2.volumes.filter(v => (v instanceof SphereVolume)),
+					transparent: false,
+				});
+			}
+
+			
+		}
+
+		viewer.dispatchEvent({type: "render.pass.scene", viewer: viewer, renderTarget: this.rtRegular});
+		viewer.renderer.setRenderTarget(null);
+		viewer.renderer.render(viewer.scene2.scene, camera);
+
+		{ // EDL PASS
+
+			const uniforms = this.edlMaterial.uniforms;
+
+			uniforms.screenWidth.value = width;
+			uniforms.screenHeight.value = height;
+
+			let proj = camera.projectionMatrix;
+			let projArray = new Float32Array(16);
+			projArray.set(proj.elements);
+
+			uniforms.uNear.value = camera.near;
+			uniforms.uFar.value = camera.far;
+			uniforms.uEDLColor.value = this.rtEDL.texture;
+			uniforms.uEDLDepth.value = this.rtEDL.depthTexture;
+			uniforms.uProj.value = projArray;
+
+			uniforms.edlStrength.value = viewer.edlStrength;
+			uniforms.radius.value = viewer.edlRadius;
+			uniforms.opacity.value = viewer.edlOpacity; // HACK
+			
+			Utils.screenPass.render(viewer.renderer, this.edlMaterial);
+
+			if(this.screenshot){
+				Utils.screenPass.render(viewer.renderer, this.edlMaterial, this.screenshot.target);
+			}
+
+		}
+
+		viewer.dispatchEvent({type: "render.pass.scene", viewer: viewer});
+
+		viewer.renderer.clearDepth();
+
+		viewer.transformationTool.update();
+
+		viewer.dispatchEvent({type: "render.pass.perspective_overlay",viewer: viewer});
+
+		viewer.renderer.render(viewer.controls.sceneControls, camera);
+		viewer.renderer.render(viewer.clippingTool.sceneVolume, camera);
+		viewer.renderer.render(viewer.transformationTool.scene, camera);
+		
+		viewer.dispatchEvent({type: "render.pass.end",viewer: viewer});
+
+	}
 }
 
