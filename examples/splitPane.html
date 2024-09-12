@@ -137,8 +137,8 @@
 		// 	viewer.scene2.addPointCloud(pointcloud);
 		// 	viewer.fitToScreen();
 		// });
-		console.log("viewer", viewer);
-		ifc.load('../pointclouds/Project1.ifc');
+		ifc.load('../pointclouds/Project1.ifc', viewer.scene, "ifc")
+												.then(mesh => console.log("loaded mesh", mesh));
 
         viewer.splitPane();
 		viewer.splitPaneResize(viewer.renderArea.clientWidth / 3);
