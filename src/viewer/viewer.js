@@ -1,5 +1,6 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
+import { IFCLoader } from "../../libs/three.js/extra/IFCLoader.js";
 import {ClipTask, ClipMethod, CameraMode, LengthUnits, ElevationGradientRepeat} from "../defines.js";
 import {Renderer} from "../PotreeRenderer.js";
 import {PotreeRenderer} from "./PotreeRenderer.js";
@@ -15,6 +16,8 @@ import {BoxVolume} from "../utils/Volume.js";
 import {Features} from "../Features.js";
 import {Message} from "../utils/Message.js";
 import {Sidebar} from "./sidebar.js";
+
+import { PointCloudOctree } from "../PointCloudOctree.js";
 
 import {AnnotationTool} from "../utils/AnnotationTool.js";
 import {MeasuringTool} from "../utils/MeasuringTool.js";
@@ -42,6 +45,7 @@ export class Viewer extends EventDispatcher{
 		super();
 
 		this.renderArea = domElement;
+		this.splitWidth = null;
 		this.guiLoaded = false;
 		this.guiLoadTasks = [];
 
@@ -164,12 +168,14 @@ export class Viewer extends EventDispatcher{
 		this.pRenderer = null;
 
 		this.scene = null;
+		this.scene2 = null;
 		this.sceneVR = null;
 		this.overlay = null;
 		this.overlayCamera = null;
 
 		this.inputHandler = null;
 		this.controls = null;
+		this.splitScreenEnabled = false;
 
 		this.clippingTool =  null;
 		this.transformationTool = null;
@@ -229,6 +235,8 @@ export class Viewer extends EventDispatcher{
 		
 
 		let scene = new Scene(this.renderer);
+		// let scene2 = new Scene(this.renderer);
+		
 		
 		{ // create VR scene
 			this.sceneVR = new THREE.Scene();
@@ -247,6 +255,8 @@ export class Viewer extends EventDispatcher{
 		}
 
 		this.setScene(scene);
+		this.scene2 = this.deepCopyScene(this.scene);
+		// this.setScene2(scene2);
 
 		{
 			this.inputHandler = new InputHandler(this);
@@ -291,6 +301,7 @@ export class Viewer extends EventDispatcher{
 
 			this.scene.addEventListener("volume_removed", onVolumeRemoved);
 			this.scene.addEventListener('pointcloud_added', onPointcloudAdded);
+
 		}
 
 		{ // set defaults
@@ -421,6 +432,51 @@ export class Viewer extends EventDispatcher{
 				oldScene.annotations.removeEventListener('annotation_added', this.onAnnotationAdded);
 			}
 			this.scene.annotations.addEventListener('annotation_added', this.onAnnotationAdded);
+		}
+	};
+
+	setScene2 (scene) {
+		if (scene === this.scene2) {
+			return;
+		}
+
+		let oldScene = this.scene2;
+		this.scene2 = scene;
+
+		this.dispatchEvent({
+			type: 'scene_changed',
+			oldScene: oldScene,
+			scene: scene
+		});
+
+		{ // Annotations
+			$('.annotation').detach();
+
+			// for(let annotation of this.scene.annotations){
+			//	this.renderArea.appendChild(annotation.domElement[0]);
+			// }
+
+			this.scene2.annotations.traverse(annotation => {
+				this.renderArea.appendChild(annotation.domElement[0]);
+			});
+
+			if (!this.onAnnotationAdded) {
+				this.onAnnotationAdded = e => {
+				// console.log("annotation added: " + e.annotation.title);
+
+					e.annotation.traverse(node => {
+
+						$("#potree_annotation_container").append(node.domElement);
+						//this.renderArea.appendChild(node.domElement[0]);
+						node.scene = this.scene2;
+					});
+				};
+			}
+
+			if (oldScene) {
+				oldScene.annotations.removeEventListener('annotation_added', this.onAnnotationAdded);
+			}
+			this.scene2.annotations.addEventListener('annotation_added', this.onAnnotationAdded);
 		}
 	};
 
@@ -870,6 +926,9 @@ export class Viewer extends EventDispatcher{
 	getBoundingBox (pointclouds) {
 		return this.scene.getBoundingBox(pointclouds);
 	};
+	getBoundingBox2 (pointclouds) {
+		return this.scene2.getBoundingBox(pointclouds);
+	};
 
 	getGpsTimeExtent(){
 		const range = [Infinity, -Infinity];
@@ -984,7 +1043,7 @@ export class Viewer extends EventDispatcher{
 	}
 
 	getProjection(){
-		const pointcloud = this.scene.pointclouds[0];
+		const pointcloud = this.splitScreenEnabled ? this.scene2.pointclouds[0] : this.scene.pointclouds[0];
 
 		if(pointcloud){
 			return pointcloud.projection;
@@ -1075,6 +1134,7 @@ export class Viewer extends EventDispatcher{
 			let z = parseFloat(tokens[2]);
 
 			this.scene.view.position.set(x, y, z);
+			this.scene2.view.position.set(x, y, z);
 		}
 
 		if (Utils.getParameterByName('target')) {
@@ -1086,6 +1146,7 @@ export class Viewer extends EventDispatcher{
 			let z = parseFloat(tokens[2]);
 
 			this.scene.view.lookAt(new THREE.Vector3(x, y, z));
+			this.scene2.view.lookAt(new THREE.Vector3(x, y, z));
 		}
 
 		if (Utils.getParameterByName('background')) {
@@ -1269,7 +1330,7 @@ export class Viewer extends EventDispatcher{
 			i18n.init({
 				lng: 'en',
 				resGetPath: Potree.resourcePath + '/lang/__lng__/__ns__.json',
-				preload: ['en', 'fr', 'de', 'jp', 'se', 'es', 'zh', 'it','ca'],
+				preload: ['en'],
 				getAsync: true,
 				debug: false
 			}, function (t) {
@@ -1612,6 +1673,288 @@ export class Viewer extends EventDispatcher{
 	}
 
 	update(delta, timestamp){
+		if (this.splitScreenEnabled) {
+			if(Potree.measureTimings) performance.mark("update-start");
+
+			this.dispatchEvent({
+				type: 'update_start',
+				delta: delta,
+				timestamp: timestamp});
+
+		
+			const scene = this.scene2;
+			const camera = scene.getActiveCamera();
+			const visiblePointClouds = this.scene2.pointclouds.filter(pc => pc.visible)
+			
+			
+			Potree.pointLoadLimit = Potree.pointBudget * 2;
+
+			const lTarget = camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000));
+			this.scene2.directionalLight.position.copy(camera.position);
+			this.scene2.directionalLight.lookAt(lTarget);
+
+
+		for (let pointcloud of visiblePointClouds) {
+
+			pointcloud.showBoundingBox = this.showBoundingBox;
+			pointcloud.generateDEM = this.generateDEM;
+			pointcloud.minimumNodePixelSize = this.minNodeSize;
+
+			let material = pointcloud.material;
+
+			material.uniforms.uFilterReturnNumberRange.value = this.filterReturnNumberRange;
+			material.uniforms.uFilterNumberOfReturnsRange.value = this.filterNumberOfReturnsRange;
+			material.uniforms.uFilterGPSTimeClipRange.value = this.filterGPSTimeRange;
+			material.uniforms.uFilterPointSourceIDClipRange.value = this.filterPointSourceIDRange;
+
+			material.classification = this.classifications;
+			material.recomputeClassification();
+
+			this.updateMaterialDefaults(pointcloud);
+		}
+
+		{
+			if(this.showBoundingBox){
+				let bbRoot = this.scene2.scene.getObjectByName("potree_bounding_box_root");
+				if(!bbRoot){
+					let node = new THREE.Object3D();
+					node.name = "potree_bounding_box_root";
+					this.scene2.scene.add(node);
+					bbRoot = node;
+				}
+
+				let visibleBoxes = [];
+				for(let pointcloud of this.scene2.pointclouds){
+					for(let node of pointcloud.visibleNodes.filter(vn => vn.boundingBoxNode !== undefined)){
+						let box = node.boundingBoxNode;
+						visibleBoxes.push(box);
+					}
+				}
+
+				bbRoot.children = visibleBoxes;
+			}
+		}
+
+		if (!this.freeze) {
+			let result = Potree.updatePointClouds(scene.pointclouds, camera, this.renderer);
+
+
+			// DEBUG - ONLY DISPLAY NODES THAT INTERSECT MOUSE
+			//if(false){ 
+
+			//	let renderer = viewer.renderer;
+			//	let mouse = viewer.inputHandler.mouse;
+
+			//	let nmouse = {
+			//		x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
+			//		y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
+			//	};
+
+			//	let pickParams = {};
+
+			//	//if(params.pickClipped){
+			//	//	pickParams.pickClipped = params.pickClipped;
+			//	//}
+
+			//	pickParams.x = mouse.x;
+			//	pickParams.y = renderer.domElement.clientHeight - mouse.y;
+
+			//	let raycaster = new THREE.Raycaster();
+			//	raycaster.setFromCamera(nmouse, camera);
+			//	let ray = raycaster.ray;
+
+			//	for(let pointcloud of scene.pointclouds){
+			//		let nodes = pointcloud.nodesOnRay(pointcloud.visibleNodes, ray);
+			//		pointcloud.visibleNodes = nodes;
+
+			//	}
+			//}
+
+			// const tStart = performance.now();
+			// const worldPos = new THREE.Vector3();
+			// const camPos = viewer.scene.getActiveCamera().getWorldPosition(new THREE.Vector3());
+			// let lowestDistance = Infinity;
+			// let numNodes = 0;
+
+			// viewer.scene.scene.traverse(node => {
+			// 	node.getWorldPosition(worldPos);
+
+			// 	const distance = worldPos.distanceTo(camPos);
+
+			// 	lowestDistance = Math.min(lowestDistance, distance);
+
+			// 	numNodes++;
+
+			// 	if(Number.isNaN(distance)){
+			// 		console.error(":(");
+			// 	}
+			// });
+			// const duration = (performance.now() - tStart).toFixed(2);
+
+			// Potree.debug.computeNearDuration = duration;
+			// Potree.debug.numNodes = numNodes;
+
+			//console.log(lowestDistance.toString(2), duration);
+
+			const tStart = performance.now();
+			const campos = camera.position;
+			let closestImage = Infinity;
+			for(const images of this.scene2.orientedImages){
+				for(const image of images.images){
+					const distance = image.mesh.position.distanceTo(campos);
+
+					closestImage = Math.min(closestImage, distance);
+				}
+			}
+			const tEnd = performance.now();
+
+			if(result.lowestSpacing !== Infinity){
+				let near = result.lowestSpacing * 10.0;
+				let far = -this.getBoundingBox2().applyMatrix4(camera.matrixWorldInverse).min.z;
+
+				far = Math.max(far * 1.5, 10000);
+				near = Math.min(100.0, Math.max(0.01, near));
+				near = Math.min(near, closestImage);
+				far = Math.max(far, near + 10000);
+
+				if(near === Infinity){
+					near = 0.1;
+				}
+				
+				camera.near = near;
+				camera.far = far;
+			}else{
+				// don't change near and far in this case
+			}
+
+			if(this.scene2.cameraMode == CameraMode.ORTHOGRAPHIC) {
+				camera.near = -camera.far;
+			}
+		} 
+		
+		this.scene2.cameraP.fov = this.fov;
+		
+		let controls = this.getControls();
+		if (controls === this.deviceControls) {
+			this.controls.setScene(scene);
+			this.controls.update(delta);
+
+			this.scene2.cameraP.position.copy(scene.view.position);
+			this.scene2.cameraO.position.copy(scene.view.position);
+		} else if (controls !== null) {
+			controls.setScene(scene);
+			controls.update(delta);
+
+			if(typeof debugDisabled === "undefined" ){
+				this.scene2.cameraP.position.copy(scene.view.position);
+				this.scene2.cameraP.rotation.order = "ZXY";
+				this.scene2.cameraP.rotation.x = Math.PI / 2 + this.scene.view.pitch;
+				this.scene2.cameraP.rotation.z = this.scene.view.yaw;
+			}
+
+			this.scene2.cameraO.position.copy(scene.view.position);
+			this.scene2.cameraO.rotation.order = "ZXY";
+			this.scene2.cameraO.rotation.x = Math.PI / 2 + this.scene2.view.pitch;
+			this.scene2.cameraO.rotation.z = this.scene2.view.yaw;
+		}
+		
+		camera.updateMatrix();
+		camera.updateMatrixWorld();
+		camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+
+		{
+			if(this._previousCamera === undefined){
+				this._previousCamera = this.scene2.getActiveCamera().clone();
+				this._previousCamera.rotation.copy(this.scene2.getActiveCamera().rotation);
+			}
+
+			if(!this._previousCamera.matrixWorld.equals(camera.matrixWorld)){
+				this.dispatchEvent({
+					type: "camera_changed",
+					previous: this._previousCamera,
+					camera: camera
+				});
+			}else if(!this._previousCamera.projectionMatrix.equals(camera.projectionMatrix)){
+				this.dispatchEvent({
+					type: "camera_changed",
+					previous: this._previousCamera,
+					camera: camera
+				});
+			}
+
+			this._previousCamera = this.scene2.getActiveCamera().clone();
+			this._previousCamera.rotation.copy(this.scene2.getActiveCamera().rotation);
+
+		}
+
+		{ // update clip boxes
+			let boxes = [];
+			
+			// volumes with clipping enabled
+			//boxes.push(...this.scene.volumes.filter(v => (v.clip)));
+			boxes.push(...this.scene2.volumes.filter(v => (v.clip && v instanceof BoxVolume)));
+
+			// profile segments
+			for(let profile of this.scene2.profiles){
+				boxes.push(...profile.boxes);
+			}
+			
+			// Needed for .getInverse(), pre-empt a determinant of 0, see #815 / #816
+			let degenerate = (box) => box.matrixWorld.determinant() !== 0;
+			
+			let clipBoxes = boxes.filter(degenerate).map( box => {
+				box.updateMatrixWorld();
+				
+				let boxInverse = box.matrixWorld.clone().invert();
+				let boxPosition = box.getWorldPosition(new THREE.Vector3());
+
+				return {box: box, inverse: boxInverse, position: boxPosition};
+			});
+
+			let clipPolygons = this.scene2.polygonClipVolumes.filter(vol => vol.initialized);
+			
+			// set clip volumes in material
+			for(let pointcloud of visiblePointClouds){
+				pointcloud.material.setClipBoxes(clipBoxes);
+				pointcloud.material.setClipPolygons(clipPolygons, this.clippingTool.maxPolygonVertices);
+				pointcloud.material.clipTask = this.clipTask;
+				pointcloud.material.clipMethod = this.clipMethod;
+			}
+		}
+
+		{
+			for(let pointcloud of visiblePointClouds){
+				pointcloud.material.elevationGradientRepeat = this.elevationGradientRepeat;
+			}
+		}
+		
+		{ // update navigation cube
+			this.navigationCube.update(camera.rotation);
+		}
+
+		this.updateAnnotations();
+		
+		if(this.mapView){
+			this.mapView.update(delta);
+			if(this.mapView.sceneProjection){
+				$( "#potree_map_toggle" ).css("display", "block");
+				
+			}
+		}
+
+		TWEEN.update(timestamp);
+
+		this.dispatchEvent({
+			type: 'update',
+			delta: delta,
+			timestamp: timestamp});
+			
+		if(Potree.measureTimings) {
+			performance.mark("update-end");
+			performance.measure("update", "update-start", "update-end");
+		}
+	  }
+
 
 		if(Potree.measureTimings) performance.mark("update-start");
 
@@ -1892,7 +2235,6 @@ export class Viewer extends EventDispatcher{
 			performance.measure("update", "update-start", "update-end");
 		}
 	}
-
 	getPRenderer(){
 		if(this.useHQ){
 			if (!this.hqRenderer) {
@@ -2087,6 +2429,71 @@ export class Viewer extends EventDispatcher{
 
 			this.renderer.setSize(width, height);
 			const pixelRatio = this.renderer.getPixelRatio();
+		}
+
+
+    if (this.splitScreenEnabled) {
+		pRenderer.clear();
+		this.renderer.clear();
+    	this.renderer.setScissorTest(true);
+        const width = this.scaleFactor * this.renderArea.clientWidth;
+		const height = this.scaleFactor * this.renderArea.clientHeight;
+
+		const aspect = (width) / height;
+
+		const scene = this.scene;
+		const scene2 = this.scene2;
+
+		scene.cameraP.aspect = aspect;
+		scene.cameraP.updateProjectionMatrix();
+		
+
+		scene2.cameraP.aspect = aspect;
+		scene2.cameraP.updateProjectionMatrix();
+
+		let frustumScale = this.scene.view.radius;
+		scene.cameraO.left = -frustumScale;
+		scene.cameraO.right = frustumScale;
+		scene.cameraO.top = frustumScale * 1 / aspect;
+		scene.cameraO.bottom = -frustumScale * 1 / aspect;
+		scene.cameraO.updateProjectionMatrix();
+
+		let frustumScale2 = this.scene2.view.radius;
+		scene2.cameraO.left = -frustumScale2;
+		scene2.cameraO.right = frustumScale2;
+		scene2.cameraO.top = frustumScale2 * 1 / aspect;
+		scene2.cameraO.bottom = -frustumScale2 * 1 / aspect;
+		scene2.cameraO.updateProjectionMatrix();
+
+		scene.cameraScreenSpace.top = 1/aspect;
+		scene.cameraScreenSpace.bottom = -1/aspect;
+		scene.cameraScreenSpace.updateProjectionMatrix();
+
+		scene2.cameraScreenSpace.top = 1/aspect;
+		scene2.cameraScreenSpace.bottom = -1/aspect;
+		scene2.cameraScreenSpace.updateProjectionMatrix();
+
+        // Render Scene 1 on the left side
+		const scissorWidth1 = this.splitWidth * this.scaleFactor;
+		const scissorWidth2 = (width - this.splitWidth) * this.scaleFactor;
+        this.renderer.setViewport(0, 0, width, height);
+        this.renderer.setScissor(0, 0, scissorWidth1, height);
+		pRenderer.render(this.renderer);
+
+        this.renderer.setViewport(0, 0, width, height);
+        this.renderer.setScissor(scissorWidth1, 0, scissorWidth2, height);
+		pRenderer.clear();
+        pRenderer.splitRender(this.renderer);
+
+		this.renderer.setScissorTest(false);
+    } else{// pRenderer rendering for single scene
+		pRenderer.clear();
+		{ // resize
+			const width = this.scaleFactor * this.renderArea.clientWidth;
+			const height = this.scaleFactor * this.renderArea.clientHeight;
+
+			this.renderer.setSize(width, height);
+			const pixelRatio = this.renderer.getPixelRatio();
 			const aspect = width / height;
 
 			const scene = this.scene;
@@ -2105,10 +2512,8 @@ export class Viewer extends EventDispatcher{
 			scene.cameraScreenSpace.bottom = -1/aspect;
 			scene.cameraScreenSpace.updateProjectionMatrix();
 		}
-
-		pRenderer.clear();
-
 		pRenderer.render(this.renderer);
+	}
 		this.renderer.render(this.overlay, this.overlayCamera);
 	}
 	
@@ -2315,4 +2720,70 @@ export class Viewer extends EventDispatcher{
 
 		return message;
 	}
+	deepCopyScene(originalScene) {
+		const copiedScene = Object.assign(Object.create(Object.getPrototypeOf(originalScene)), originalScene);
+		
+		// Deep copy specific properties
+		copiedScene.scene = originalScene.scene ? originalScene.scene.clone() : null;
+  		copiedScene.sceneBG = originalScene.sceneBG ? originalScene.sceneBG.clone() : null;
+  		
+		  if (originalScene.scenePointCloud) {
+			if (originalScene.pointclouds && originalScene.pointclouds.length > 0) {
+			
+			  copiedScene.scenePointCloud = originalScene.scenePointCloud.clone();
+			  copiedScene.pointclouds = originalScene.pointclouds.map(pc => pc.clone());
+			} else {
+			
+			  copiedScene.scenePointCloud = new THREE.Scene().copy(originalScene.scenePointCloud);
+			  copiedScene.pointclouds = [];
+			}
+		  } else {
+			copiedScene.scenePointCloud = null;
+			copiedScene.pointclouds = [];
+		  }
+		return copiedScene;
+	}
+
+	splitScreenUncheck(){
+		const tree = $("#jstree_scene");
+		console.log("split screen uncheck");
+		const ifcs = $("#jstree_scene").jstree().get_node("ifc").children;
+
+		if(ifcs.length > 0){
+			ifcs.forEach(node => {
+				const ifc = $("#jstree_scene").jstree().get_node(node);
+				if (this.splitScreenEnabled) {
+					if (ifc.data.name === "split-ifc") {
+						$("#jstree_scene").jstree('check_node', node);
+					} else if (ifc.data.name === "ifc") {
+						$("#jstree_scene").jstree('uncheck_node', node);
+					}
+				} else {
+					if (ifc.data.name === "split-ifc") {
+						$("#jstree_scene").jstree('uncheck_node', node);
+					} else if (ifc.data.name === "ifc") {
+						$("#jstree_scene").jstree('check_node', node);
+					}
+				}
+			});
+		}
+
+	};
+
+	splitPane(){
+		// scene2 = this.deepCopyScene(this.scene);
+		console.log("split pane");
+		this.splitScreenEnabled = true;
+		this.loop();
+	}
+
+	splitPaneResize(x){
+		this.splitWidth = x;
+	}
+
+	splitPaneCancel(){
+		this.splitScreenEnabled = false;
+		this.loop();
+	}
+
 };
