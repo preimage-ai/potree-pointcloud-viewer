@@ -167,6 +167,9 @@ gulp.task("core-libs", async function(done) {
 	gulp.src(["./libs-core/32px.png", "./libs-core/40px.png", "./libs-core/throbber.gif"])
 	.pipe(gulp.dest("./build/core-libs"));
 
+	gulp.src("./libs-core/extra/ifc/web-ifc.wasm")
+	.pipe(gulp.dest("./build/three.js/extra/ifc"));
+
 	done();
 });
 
