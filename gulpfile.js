@@ -11,12 +11,20 @@ const terser = require('gulp-terser');
 const {watch} = gulp;
 const { promisify } = require('util');
 
+const postcss = require('gulp-postcss');
+const cssnano = require('cssnano');
+const autoprefixer = require('autoprefixer');
+
 const execPromise = promisify(exec);
 
 const {createExamplesPage} = require("./src/tools/create_potree_page");
 const {createGithubPage} = require("./src/tools/create_github_page");
 const {createIconsPage} = require("./src/tools/create_icons_page");
 
+const plugins = [
+    autoprefixer(),
+    cssnano()
+];
 
 let paths = {
 	laslaz: [
@@ -143,8 +151,14 @@ gulp.task("core-libs", async function(done) {
 	.pipe(concat("script.js", { newLine: ';' }))
 	.pipe(gulp.dest("./build/core-libs"));
 
-	gulp.src("./libs-core/styles/**/*.css")
+	gulp.src([
+		'./libs-core/styles/jquery-ui.min.css',
+		'./libs-core/styles/ol.css',
+		'./libs-core/styles/spectrum.min.css',
+		'./libs-core/styles/jstree.min.css',
+	])
 	.pipe(concat("style.css"))
+	.pipe(postcss(plugins)) 
 	.pipe(gulp.dest("./build/core-libs"));
 
 	gulp.src("./libs-core/images/**/*.*")
@@ -227,8 +241,12 @@ gulp.task("pack", gulp.series("shaders", async function(){
 		console.log(stdout);
 		console.log(stderr);
 
-		return gulp.src('build/potree/potree.js')
+		gulp.src('build/potree/potree.js')
 			.pipe(terser())
+			.pipe(gulp.dest('build/potree'));
+
+		return gulp.src('build/potree/potree.css')
+			.pipe(postcss(plugins))
 			.pipe(gulp.dest('build/potree'));
 	} catch(err){
 		console.error('Error during Rollup build:', err);
