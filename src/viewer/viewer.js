@@ -2440,43 +2440,81 @@ export class Viewer extends EventDispatcher{
         const width = this.scaleFactor * this.renderArea.clientWidth;
 		const height = this.scaleFactor * this.renderArea.clientHeight;
 
-		const aspect = (width) / height;
-
-		const scene = this.scene;
-		const scene2 = this.scene2;
-
-		scene.cameraP.aspect = aspect;
-		scene.cameraP.updateProjectionMatrix();
-		
-
-		scene2.cameraP.aspect = aspect;
-		scene2.cameraP.updateProjectionMatrix();
-
-		let frustumScale = this.scene.view.radius;
-		scene.cameraO.left = -frustumScale;
-		scene.cameraO.right = frustumScale;
-		scene.cameraO.top = frustumScale * 1 / aspect;
-		scene.cameraO.bottom = -frustumScale * 1 / aspect;
-		scene.cameraO.updateProjectionMatrix();
-
-		let frustumScale2 = this.scene2.view.radius;
-		scene2.cameraO.left = -frustumScale2;
-		scene2.cameraO.right = frustumScale2;
-		scene2.cameraO.top = frustumScale2 * 1 / aspect;
-		scene2.cameraO.bottom = -frustumScale2 * 1 / aspect;
-		scene2.cameraO.updateProjectionMatrix();
-
-		scene.cameraScreenSpace.top = 1/aspect;
-		scene.cameraScreenSpace.bottom = -1/aspect;
-		scene.cameraScreenSpace.updateProjectionMatrix();
-
-		scene2.cameraScreenSpace.top = 1/aspect;
-		scene2.cameraScreenSpace.bottom = -1/aspect;
-		scene2.cameraScreenSpace.updateProjectionMatrix();
-
-        // Render Scene 1 on the left side
 		const scissorWidth1 = this.splitWidth * this.scaleFactor;
 		const scissorWidth2 = (width - this.splitWidth) * this.scaleFactor;
+
+		if (!this.overlayPtcld) {
+			const aspect1 = (scissorWidth1) / height;
+			const aspect2 = (scissorWidth2) / height;
+
+			const scene = this.scene;
+			const scene2 = this.scene2;
+
+			scene.cameraP.aspect = aspect1;
+			scene.cameraP.updateProjectionMatrix();
+			
+
+			scene2.cameraP.aspect = aspect2;
+			scene2.cameraP.updateProjectionMatrix();
+
+			let frustumScale = this.scene.view.radius;
+			scene.cameraO.left = -frustumScale;
+			scene.cameraO.right = frustumScale;
+			scene.cameraO.top = frustumScale * 1 / aspect1;
+			scene.cameraO.bottom = -frustumScale * 1 / aspect1;
+			scene.cameraO.updateProjectionMatrix();
+
+			let frustumScale2 = this.scene2.view.radius;
+			scene2.cameraO.left = -frustumScale2;
+			scene2.cameraO.right = frustumScale2;
+			scene2.cameraO.top = frustumScale2 * 1 / aspect2;
+			scene2.cameraO.bottom = -frustumScale2 * 1 / aspect2;
+			scene2.cameraO.updateProjectionMatrix();
+
+			scene.cameraScreenSpace.top = 1/aspect1;
+			scene.cameraScreenSpace.bottom = -1/aspect1;
+			scene.cameraScreenSpace.updateProjectionMatrix();
+
+			scene2.cameraScreenSpace.top = 1/aspect2;
+			scene2.cameraScreenSpace.bottom = -1/aspect2;
+			scene2.cameraScreenSpace.updateProjectionMatrix();
+		} else {
+			const aspect = (width) / height;
+
+			const scene = this.scene;
+			const scene2 = this.scene2;
+
+			scene.cameraP.aspect = aspect;
+			scene.cameraP.updateProjectionMatrix();
+			
+
+			scene2.cameraP.aspect = aspect;
+			scene2.cameraP.updateProjectionMatrix();
+
+			let frustumScale = this.scene.view.radius;
+			scene.cameraO.left = -frustumScale;
+			scene.cameraO.right = frustumScale;
+			scene.cameraO.top = frustumScale * 1 / aspect;
+			scene.cameraO.bottom = -frustumScale * 1 / aspect;
+			scene.cameraO.updateProjectionMatrix();
+
+			let frustumScale2 = this.scene2.view.radius;
+			scene2.cameraO.left = -frustumScale2;
+			scene2.cameraO.right = frustumScale2;
+			scene2.cameraO.top = frustumScale2 * 1 / aspect;
+			scene2.cameraO.bottom = -frustumScale2 * 1 / aspect;
+			scene2.cameraO.updateProjectionMatrix();
+
+			scene.cameraScreenSpace.top = 1/aspect;
+			scene.cameraScreenSpace.bottom = -1/aspect;
+			scene.cameraScreenSpace.updateProjectionMatrix();
+
+			scene2.cameraScreenSpace.top = 1/aspect;
+			scene2.cameraScreenSpace.bottom = -1/aspect;
+			scene2.cameraScreenSpace.updateProjectionMatrix();
+		}
+
+        // Render Scene 1 on the left side
         if (this.overlayPtcld) {
 			this.renderer.setViewport(0, 0, width, height);
 		} else {

@@ -56,16 +56,16 @@
         });
 
 		// keep your 360 data in example folder by potree name
-		const url = 'potree/metadata.json';
-        const hierarchyUrl = 'potree/hierarchy.bin';
-        const octreeUrl = 'potree/octree.bin';
+		const url = 'sanskar/metadata.json';
+        const hierarchyUrl = 'sanskar/hierarchy.bin';
+        const octreeUrl = 'sanskar/octree.bin';
         const otherPath = {
             octree: octreeUrl,
             hierarchy: hierarchyUrl,
         };
 
 		// Load and add point cloud to scene
-		Potree.loadPointCloud("../pointclouds/demo/cloud.js",undefined, "bj", e => {
+		Potree.loadPointCloud(url, otherPath, "ptcld", e => {
 			let scene = viewer.scene;
 			let pointcloud = e.pointcloud;
 			
