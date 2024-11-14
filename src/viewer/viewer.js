@@ -46,6 +46,7 @@ export class Viewer extends EventDispatcher{
 
 		this.renderArea = domElement;
 		this.splitWidth = null;
+		this.overlayPtcld = true;
 		this.guiLoaded = false;
 		this.guiLoadTasks = [];
 
@@ -2476,11 +2477,19 @@ export class Viewer extends EventDispatcher{
         // Render Scene 1 on the left side
 		const scissorWidth1 = this.splitWidth * this.scaleFactor;
 		const scissorWidth2 = (width - this.splitWidth) * this.scaleFactor;
-        this.renderer.setViewport(0, 0, width, height);
+        if (this.overlayPtcld) {
+			this.renderer.setViewport(0, 0, width, height);
+		} else {
+			this.renderer.setViewport(0, 0, scissorWidth1, height);
+		}
         this.renderer.setScissor(0, 0, scissorWidth1, height);
 		pRenderer.render(this.renderer);
 
-        this.renderer.setViewport(0, 0, width, height);
+        if (this.overlayPtcld) {
+			this.renderer.setViewport(0, 0, width, height);
+		} else {
+			this.renderer.setViewport(scissorWidth1, 0, scissorWidth2, height);
+		}
         this.renderer.setScissor(scissorWidth1, 0, scissorWidth2, height);
 		pRenderer.clear();
         pRenderer.splitRender(this.renderer);
@@ -2783,6 +2792,11 @@ export class Viewer extends EventDispatcher{
 
 	splitPaneCancel(){
 		this.splitScreenEnabled = false;
+		this.loop();
+	}
+
+	splitPaneOverlay(overlayPtcld){
+		this.overlayPtcld = overlayPtcld;
 		this.loop();
 	}
 
