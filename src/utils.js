@@ -398,11 +398,17 @@ export class Utils {
 	static getMousePointCloudIntersection (mouse, camera, viewer, pointclouds, params = {}) {
 		
 		let renderer = viewer.renderer;
+
+		let width = viewer.splitWidth;
 		
-		let nmouse = {
-			x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
-			y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
-		};
+		let nmouse = {};
+		if (viewer.overlayPtcld) {
+			nmouse.x = (mouse.x / renderer.domElement.clientWidth) * 2 - 1;
+			nmouse.y = -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
+		} else {
+			nmouse.x = (mouse.x / width) * 2 - 1;
+			nmouse.y = -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
+		}
 
 		let pickParams = {};
 
@@ -417,6 +423,7 @@ export class Utils {
 		raycaster.setFromCamera(nmouse, camera);
 		let ray = raycaster.ray;
 
+
 		let selectedPointcloud = null;
 		let closestDistance = Infinity;
 		let closestIntersection = null;
@@ -424,7 +431,7 @@ export class Utils {
 		
 		for(let pointcloud of pointclouds){
 			let point = pointcloud.pick(viewer, camera, ray, pickParams);
-			
+			console.log("point pick, pickParams", point, pickParams);
 			if(!point){
 				continue;
 			}

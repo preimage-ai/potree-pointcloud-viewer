@@ -184,7 +184,7 @@ export class OrbitControls extends EventDispatcher{
 			this.viewer,
 			this.scene.pointclouds,
 			{pickClipped: true});
-
+		console.log("orbitcontrol zommtoloc intersection", I);
 		if (I === null) {
 			return;
 		}
