@@ -12,13 +12,22 @@
 </head>
 
 <body>
-	<script src="../../build/core-libs/script.js"></script>
+	<script src="../../libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="../../libs/spectrum/spectrum.js"></script>
+	<script src="../../libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="../../libs/other/BinaryHeap.js"></script>
+	<script src="../../libs/tween/tween.min.js"></script>
+	<script src="../../libs/d3/d3.js"></script>
+	<script src="../../libs/proj4/proj4.js"></script>
+	<script src="../../libs/openlayers3/ol.js"></script>
+	<script src="../../libs/i18next/i18next.js"></script>
+	<script src="../../libs/jstree/jstree.js"></script>
 	<script src="../../build/potree/potree.js"></script>
+	<script src="../../libs/plasio/js/laslaz.js"></script>
 	
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
             <div id="potree_render_area" style="background-image: url('../../build/potree/resources/images/background.jpg');"> 
-				<div id="potree_toolbar"></div>
 			</div>
             <!-- <div id="potree_render_area_2" style="background-image: url('../../build/potree/resources/images/background.jpg'); position: absolute; width: 50%; height: 100%; right: 0px; top: 0px;"></div>  -->
         <div id="potree_sidebar_container"></div>
@@ -95,7 +104,7 @@
         };
 
 		// Load and add point cloud to scene
-		Potree.loadPointCloud(url, otherPath, "ptcld", e => {
+		Potree.loadPointCloud(url, otherPath, "ptcld-split", e => {
 			// let scene1 = viewer.scene;
 			let pointcloud = e.pointcloud;
 			
@@ -106,232 +115,87 @@
 			material.shape = Potree.PointShape.SQUARE;
 			material.activeAttributeName = "rgba";
 			
-			viewer.scene.addPointCloud(pointcloud);
 			viewer.scene2.addPointCloud(pointcloud);
 			viewer.fitToScreen();
-		});
-	
 
-		// Potree.loadPointCloud("../pointclouds/demo/cloud.js",undefined, "split-ptcld", e => {
-		// 	// let scene2 = viewer.scene2;
-		// 	let pointcloud = e.pointcloud;
-		// 	console.log("pointcloud split", pointcloud);
-		// 	let material = pointcloud.material;
-		// 	material.size = 0.5;
-		// 	material.minSize = 2.0;
-		// 	material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-		// 	material.shape = Potree.PointShape.SQUARE;
-		// 	material.activeAttributeName = "rgba";
+			run2();
+		});
+		const url2 = 'potree/metadata.json';
+        const hierarchyUrl2 = 'potree/hierarchy.bin';
+        const octreeUrl2 = 'potree/octree.bin';
+        const otherPath2 = {
+            octree: octreeUrl2,
+            hierarchy: hierarchyUrl2,
+        };
+
+		Potree.loadPointCloud(url2, otherPath2, "ptcld", e => {
+			// let scene2 = viewer.scene2;
+			let pointcloud = e.pointcloud;
+			console.log("pointcloud split", pointcloud);
+			let material = pointcloud.material;
+			material.size = 0.5;
+			material.minSize = 2.0;
+			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			material.shape = Potree.PointShape.SQUARE;
+			material.activeAttributeName = "rgba";
 			
-		// 	viewer.scene2.addPointCloud(pointcloud);
-		// 	viewer.fitToScreen();
-		// });
-		ifc.load('sanskar/information.ifc', viewer.scene, "ifc-split")
+			viewer.scene.addPointCloud(pointcloud);
+			viewer.fitToScreen();
+
+			run();
+		});
+		ifc.load('sanskar/information.ifc', viewer.scene2, "ifc-split")
 												.then(mesh => console.log("loaded mesh", mesh));
 
         viewer.splitPane();
 		viewer.splitPaneResize(viewer.renderArea.clientWidth / 2);
 		viewer.splitPaneOverlay(false);
 
-		
-	</script>
+		async function run(){
+			// const proj4 = Potree.proj4;
+			// proj4.defs("WGS84", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+			// proj4.defs("pointcloud", viewer.getProjection());
+			// let transform = proj4("WGS84", "pointcloud");
 
-<script type="module">
+			// let params = {
+			// 	transform: transform
+			// };
 
-	import * as THREE from "../libs/three.js/build/three.module.js";
-	
-	// 1: define html of toolbar first 
-	// 2: then populate with content and actions 
-	//
-	// Following files can be used as references on how to add certain functionality to the toolbar:
-	// - sidebar.html
-	// - sidebar.js
-	// - PropertiesPanel.html and its dependencies (DistancePanel, ProfilePanel, ...)
-	// 
+			const url1 = 'potree/image360';
 
-	// HTML
-	const elToolbar = $("#potree_toolbar");
-	elToolbar.html(`
-		<span>
-			<div class="potree_toolbar_label">
-				Attribute
-			</div>
-			<div>
-				<img name="action_elevation" src="${Potree.resourcePath}/icons/profile.svg" class="annotation-action-icon" style="width: 2em; height: auto;"/>
-				<img name="action_rgb" src="${Potree.resourcePath}/icons/rgb.svg" class="annotation-action-icon" style="width: 2em; height: auto;"/>
-			</div>
-		</span>
-
-		<span class="potree_toolbar_separator" />
-
-		<span>
-			<div class="potree_toolbar_label">
-				Gradient
-			</div>
-			<div>
-				<span name="gradient_schemes"></span>
-			</div>
-		</span>
-
-		<span class="potree_toolbar_separator" />
-
-		<span>
-			<div class="potree_toolbar_label">
-				Measure
-			</div>
-			<div>
-				<img name="action_measure_point" src="${Potree.resourcePath}/icons/point.svg" class="annotation-action-icon" style="width: 2em; height: auto;"/>
-				<img name="action_measure_distance" src="${Potree.resourcePath}/icons/distance.svg" class="annotation-action-icon" style="width: 2em; height: auto;"/>
-				<img name="action_measure_circle" src="${Potree.resourcePath}/icons/circle.svg" class="annotation-action-icon" style="width: 2em; height: auto;"/>
-			</div>
-		</span>
-
-		<span class="potree_toolbar_separator" />
-
-		<span>
-			<div class="potree_toolbar_label" style="width: 12em">
-				Material
-			</div>
-			<div>
-				<select id="optMaterial" name="optMaterial"></select>
-			</div>
-		</span>
-
-		<span class="potree_toolbar_separator" />
-
-		<span>
-			<div class="potree_toolbar_label">
-				<span data-i18n="appearance.nb_max_pts">Point Budget</span>: 
-				<span name="lblPointBudget" style="display: inline-block; width: 4em;"></span>
-			</div>
-			<div>
-				<div id="sldPointBudget"></div>
-			</div>
-		</span>
-	`);
-
-	// CONTENT & ACTIONS
-
-	{ // ATTRIBUTE
-		elToolbar.find("img[name=action_elevation]").click( () => {
-			viewer.scene.pointclouds.forEach( pc => pc.material.activeAttributeName = "elevation" );
-		});
-
-		elToolbar.find("img[name=action_rgb]").click( () => {
-			viewer.scene.pointclouds.forEach( pc => pc.material.activeAttributeName = "rgba" );
-		});
-	}
-
-	{ // GRADIENT
-		const schemes = Object.keys(Potree.Gradients).map(name => ({name: name, values: Potree.Gradients[name]}));
-		const elGradientSchemes = elToolbar.find("span[name=gradient_schemes]");
-
-		for(const scheme of schemes){
-			const elButton = $(`
-				<span style=""></span>
-			`);
-
-			const svg = Potree.Utils.createSvgGradient(scheme.values);
-			svg.setAttributeNS(null, "class", `button-icon`);
-			svg.style.height = "2em";
-			svg.style.width = "1.3em";
-
-			elButton.append($(svg));
-
-			elButton.click( () => {
-				for(const pointcloud of viewer.scene.pointclouds){
-					pointcloud.material.activeAttributeName = "elevation";
-					pointcloud.material.gradient = Potree.Gradients[scheme.name];
-				}
-			});
-
-			elGradientSchemes.append(elButton);
-		}
-	}
-
-	{ // MEASURE
-		elToolbar.find("img[name=action_measure_point]").click( () => {
-			const measurement = viewer.measuringTool.startInsertion({
-				showDistances: false,
-				showAngles: false,
-				showCoordinates: true,
-				showArea: false,
-				closed: true,
-				maxMarkers: 1,
-				name: 'Point'
-			});
-		});
-
-		elToolbar.find("img[name=action_measure_distance]").click( () => {
-			const measurement = viewer.measuringTool.startInsertion({
-				showDistances: true,
-				showArea: false,
-				closed: false,
-				name: 'Distance'
-			});
-		});
-
-		elToolbar.find("img[name=action_measure_circle]").click( () => {
-			const measurement = viewer.measuringTool.startInsertion({
-				showDistances: false,
-				showHeight: false,
-				showArea: false,
-				showCircle: true,
-				showEdges: false,
-				closed: false,
-				maxMarkers: 3,
-				name: 'Circle'
-			});
-		});
-	}
-
-	{ // MATERIAL
-		let options = [
-			"rgba", 
-			"elevation",
-			"level of detail",
-			"indices",
-			// "intensity",
-			// "classification",
-			// "source id",
-		];
-
-		let attributeSelection = elToolbar.find('#optMaterial');
-		for(let option of options){
-			let elOption = $(`<option>${option}</option>`);
-			attributeSelection.append(elOption);
-		}
-
-		const updateMaterialSelection = (event, ui) => {
-			let selectedValue = attributeSelection.selectmenu().val();
-
-			for(const pointcloud of viewer.scene.pointclouds){
-				pointcloud.material.activeAttributeName = selectedValue;
+			// potree folder contains coordinates.txt
+			Potree.Images360Loader.testload(
+                  url1,
+				  viewer,
+                ).then((images) => {
+                  console.log("Loaded 360 images");
+                      viewer.scene.add360Images(images);
+                });
 			}
-		};
 
-		attributeSelection.selectmenu({change: updateMaterialSelection});
-	}
+			async function run2(){
+			// const proj4 = Potree.proj4;
+			// proj4.defs("WGS84", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+			// proj4.defs("pointcloud", viewer.getProjection());
+			// let transform = proj4("WGS84", "pointcloud");
 
-	{ // POINT BUDGET
-		elToolbar.find('#sldPointBudget').slider({
-			value: viewer.getPointBudget(),
-			min: 100_000,
-			max: 1_000_000,
-			step: 100_000,
-			slide: (event, ui) => { viewer.setPointBudget(ui.value); }
-		});
+			// let params = {
+			// 	transform: transform
+			// };
 
-		const onBudgetChange = () => {
-			let budget = (viewer.getPointBudget() / (1000_000)).toFixed(1) + "M";
-			elToolbar.find('span[name=lblPointBudget]').html(budget);
-		};
+			const url1 = 'potree/image360';
 
-		onBudgetChange();
-		viewer.addEventListener("point_budget_changed", onBudgetChange);
-	}
+			// potree folder contains coordinates.txt
+			Potree.Images360Loader.testload(
+                  url1,
+				  viewer,
+                ).then((images) => {
+                  console.log("Loaded 360 images");
+                      viewer.scene2.add360Images(images);
+                });
+			}
 
-	
+		
 	</script>
 	
 	

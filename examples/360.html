@@ -96,12 +96,10 @@
 			};
 
 			// potree folder contains coordinates.txt
-			Potree.Images360Loader.testload('potree', viewer, params).then( images => {
+			Potree.Images360Loader.test('potree', viewer, params).then( images => {
 				viewer.scene.add360Images(images);
 			});
 			
-
-			viewer.mapView.showSources(false);
 		}
 
 

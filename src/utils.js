@@ -406,7 +406,8 @@ export class Utils {
 			nmouse.x = (mouse.x / renderer.domElement.clientWidth) * 2 - 1;
 			nmouse.y = -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
 		} else {
-			nmouse.x = (mouse.x / width) * 2 - 1;
+			if (mouse.x <= viewer.splitWidth) nmouse.x = (mouse.x / width) * 2 - 1;
+			else nmouse.x = ((mouse.x - width) / (renderer.domElement.clientWidth - width)) * 2 - 1;
 			nmouse.y = -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
 		}
 
@@ -416,7 +417,8 @@ export class Utils {
 			pickParams.pickClipped = params.pickClipped;
 		}
 
-		pickParams.x = mouse.x;
+		if (mouse.x <= viewer.splitWidth) pickParams.x = mouse.x;
+		else pickParams.x = mouse.x - width;
 		pickParams.y = renderer.domElement.clientHeight - mouse.y;
 
 		let raycaster = new THREE.Raycaster();

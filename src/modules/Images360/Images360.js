@@ -225,6 +225,9 @@ export class Images360 extends EventDispatcher{
 		let domElement = this.viewer.renderer.domElement;
 
 		let ray = Potree.Utils.mouseToRay(mouse, camera, domElement.clientWidth, domElement.clientHeight);
+		if (!this.viewer.overlayPtcld) {
+			ray = Potree.Utils.mouseToRay(mouse, camera, this.viewer.splitWidth, domElement.clientHeight);
+		}
 
 		// let tStart = performance.now();
 		raycaster.ray.copy(ray);

@@ -176,6 +176,10 @@ export class OrbitControls extends EventDispatcher{
 	}
 	
 	zoomToLocation(mouse){
+	
+		if (mouse.x > this.viewer.splitWidth && !this.viewer.overlayPtcld) {
+			this.setScene(this.viewer.scene2);
+		}
 		let camera = this.scene.getActiveCamera();
 		
 		let I = Utils.getMousePointCloudIntersection(
