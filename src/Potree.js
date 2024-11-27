@@ -66,6 +66,7 @@ export * from "./viewer/HierarchicalSlider.js";
 export * from "./modules/OrientedImages/OrientedImages.js";
 export * from "./modules/Images360/Images360.js";
 export * from "./modules/CameraAnimation/CameraAnimation.js";
+export * from "./modules/IFC/ifcLoader.js";
 
 export * from "./modules/loader/2.0/OctreeLoader.js";
 

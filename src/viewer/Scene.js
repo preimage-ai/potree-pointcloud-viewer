@@ -26,6 +26,7 @@ export class Scene extends EventDispatcher{
 		this.cameraMode = CameraMode.PERSPECTIVE;
 		this.overrideCamera = null;
 		this.pointclouds = [];
+		this.ifc=[];
 
 		this.measurements = [];
 		this.profiles = [];
@@ -129,6 +130,14 @@ export class Scene extends EventDispatcher{
 			pointcloud: pointcloud
 		});
 	}
+
+	addIfc(ifc){
+		this.ifc.push(ifc);
+		this.dispatchEvent({
+			type: 'ifc_added',
+			ifc: ifc
+		});
+	};
 
 	addVolume (volume) {
 		this.volumes.push(volume);

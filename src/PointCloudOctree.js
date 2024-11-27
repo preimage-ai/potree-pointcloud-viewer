@@ -747,8 +747,15 @@ export class PointCloudOctree extends PointCloudTree {
 
 		let size = renderer.getSize(new THREE.Vector2());
 
+		console.log("pick pointcloud octree, params, size", params, size)
+
 		let width = Math.ceil(getVal(params.width, size.width));
+		if (!viewer.overlayPtcld) {
+			width = Math.ceil(viewer.splitWidth);
+		}
 		let height = Math.ceil(getVal(params.height, size.height));
+
+		console.log("pick pointcloud octree, width, height", width, height);
 
 		let pointSizeType = getVal(params.pointSizeType, this.material.pointSizeType);
 		let pointSize = getVal(params.pointSize, this.material.size);

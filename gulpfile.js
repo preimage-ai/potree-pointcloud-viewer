@@ -7,12 +7,24 @@ const fs = require("fs");
 const fsp = fs.promises;
 const concat = require('gulp-concat');
 const connect = require('gulp-connect');
+const terser = require('gulp-terser');
 const {watch} = gulp;
+const { promisify } = require('util');
+
+const postcss = require('gulp-postcss');
+const cssnano = require('cssnano');
+const autoprefixer = require('autoprefixer');
+
+const execPromise = promisify(exec);
 
 const {createExamplesPage} = require("./src/tools/create_potree_page");
 const {createGithubPage} = require("./src/tools/create_github_page");
 const {createIconsPage} = require("./src/tools/create_icons_page");
 
+const plugins = [
+    autoprefixer(),
+    cssnano()
+];
 
 let paths = {
 	laslaz: [
@@ -111,12 +123,52 @@ gulp.task("workers", async function(done){
 	for(let workerName of Object.keys(workers)){
 
 		gulp.src(workers[workerName])
+			.pipe(terser())
 			.pipe(concat(`${workerName}.js`))
 			.pipe(gulp.dest('build/potree/workers'));
 	}
 
 	gulp.src('./libs/copc/laz-perf.wasm')
 		.pipe(gulp.dest('./build/potree/workers'));
+
+	done();
+});
+
+gulp.task("core-libs", async function(done) {
+	gulp.src([
+		'./libs-core/scripts/jquery-3.1.1.min.js',
+		'./libs-core/scripts/jquery-ui.min.js',
+		'./libs-core/scripts/spectrum.min.js',
+		'./libs-core/scripts/BinaryHeap.min.js',
+		'./libs-core/scripts/tween.min.js',
+		'./libs-core/scripts/d3.min.js',
+		'./libs-core/scripts/proj4.js',
+		'./libs-core/scripts/ol.js',
+		'./libs-core/scripts/i18next.js',
+		'./libs-core/scripts/jstree.min.js',
+		'./libs-core/scripts/laslaz.min.js',
+	])
+	.pipe(concat("script.js", { newLine: ';' }))
+	.pipe(gulp.dest("./build/core-libs"));
+
+	gulp.src([
+		'./libs-core/styles/jquery-ui.min.css',
+		'./libs-core/styles/ol.css',
+		'./libs-core/styles/spectrum.min.css',
+		'./libs-core/styles/jstree.min.css',
+	])
+	.pipe(concat("style.css"))
+	.pipe(postcss(plugins)) 
+	.pipe(gulp.dest("./build/core-libs"));
+
+	gulp.src("./libs-core/images/**/*.*")
+	.pipe(gulp.dest("./build/core-libs/images"));
+
+	gulp.src(["./libs-core/32px.png", "./libs-core/40px.png", "./libs-core/throbber.gif"])
+	.pipe(gulp.dest("./build/core-libs"));
+
+	gulp.src("./libs-core/extra/ifc/web-ifc.wasm")
+	.pipe(gulp.dest("./build/three.js/extra/ifc"));
 
 	done();
 });
@@ -164,7 +216,7 @@ gulp.task("shaders", async function(){
 
 gulp.task('build', 
 	gulp.series(
-		gulp.parallel("workers", "lazylibs", "shaders", "icons_viewer", "examples_page"),
+		gulp.parallel("workers", "lazylibs", "shaders", "core-libs", "icons_viewer", "examples_page"),
 		async function(done){
 			gulp.src(paths.html).pipe(gulp.dest('build/potree'));
 
@@ -177,12 +229,33 @@ gulp.task('build',
 	)
 );
 
-gulp.task("pack", async function(){
-	exec('rollup -c', function (err, stdout, stderr) {
+gulp.task("pack", gulp.series("shaders", async function(){
+	// exec('rollup -c', function (err, stdout, stderr) {
+	// 	console.log(stdout);
+	// 	console.log(stderr);
+	// 	if(!err){
+	// 		gulp.src('build/potree/potree.js')
+	// 			.pipe(terser())
+	// 			.pipe(gulp.dest('build/potree'));
+	// 	}
+	// });
+	try{
+		const { stdout, stderr } = await execPromise('rollup -c');
 		console.log(stdout);
 		console.log(stderr);
-	});
-});
+
+		gulp.src('build/potree/potree.js')
+			.pipe(terser())
+			.pipe(gulp.dest('build/potree'));
+
+		return gulp.src('build/potree/potree.css')
+			.pipe(postcss(plugins))
+			.pipe(gulp.dest('build/potree'));
+	} catch(err){
+		console.error('Error during Rollup build:', err);
+		throw err;
+	}
+}));
 
 gulp.task('watch', gulp.parallel("build", "pack", "webserver", async function() {
 
