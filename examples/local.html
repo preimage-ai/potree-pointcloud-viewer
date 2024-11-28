@@ -44,7 +44,8 @@
 		
 		viewer.setEDLEnabled(true);
 		viewer.setFOV(60);
-		viewer.setPointBudget(2_000_000);
+		viewer.setPointBudget(10_000_000);
+		viewer.useHQ = true;
 		viewer.loadSettingsFromURL();
 		viewer.setDescription(`Mobile LIDAR with 360 degree image overlays. 
 		Click on a sphere to enter 360 view. Click "unfocus" to leave 360 view. <br>
@@ -75,7 +76,7 @@
 			material.size = 0.5;
 			material.minSize = 2.0;
 			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-			material.shape = Potree.PointShape.SQUARE;
+			material.shape = Potree.PointShape.CIRCLE;
 			material.activeAttributeName = "rgba";
 			
 			scene.addPointCloud(pointcloud);

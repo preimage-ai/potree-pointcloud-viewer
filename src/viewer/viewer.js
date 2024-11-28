@@ -667,6 +667,14 @@ export class Viewer extends EventDispatcher{
 		}
 	};
 
+	setHQEnabled (value) {
+
+		if (this.useHQ !== value) {
+			this.useHQ = value;
+			this.dispatchEvent({'type': 'use_hq_changed', 'viewer': this});
+		}
+	};
+
 	getEDLEnabled () {
 		return this.useEDL;
 	};
