@@ -66,7 +66,6 @@ export class NodeLoader{
 			let worker = Potree.workerPool.getWorker(workerPath);
 
 			worker.onmessage = function (e) {
-
 				let data = e.data;
 				let buffers = data.attributeBuffers;
 
@@ -89,7 +88,50 @@ export class NodeLoader{
 						let bufferAttribute = new THREE.BufferAttribute(new Uint8Array(buffer), 4);
 						bufferAttribute.normalized = true;
 						geometry.setAttribute('indices', bufferAttribute);
-					}else{
+					} else if (property === "classification"){
+						const bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
+
+						let batchAttribute = buffers[property].attribute;
+						if (batchAttribute.range[1] == 0) {
+							bufferAttribute.potree = {
+								offset: buffers[property].offset,
+								scale: buffers[property].scale,
+								preciseBuffer: buffers[property].preciseBuffer,
+								range: batchAttribute.range,
+							};
+							geometry.setAttribute("user data", bufferAttribute);
+
+						} else {
+							bufferAttribute.potree = {
+								offset: buffers[property].offset,
+								scale: buffers[property].scale,
+								preciseBuffer: buffers[property].preciseBuffer,
+								range: batchAttribute.range,
+							};
+							geometry.setAttribute(property, bufferAttribute);
+						}
+					} else if (property === "user data"){
+						const bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
+						let batchAttribute = buffers[property].attribute;
+						if (batchAttribute.range[1] >= 1) {
+							bufferAttribute.potree = {
+								offset: buffers[property].offset,
+								scale: buffers[property].scale,
+								preciseBuffer: buffers[property].preciseBuffer,
+								range: batchAttribute.range,
+							};
+							geometry.setAttribute("classification", bufferAttribute);
+
+						} else {
+							bufferAttribute.potree = {
+								offset: buffers[property].offset,
+								scale: buffers[property].scale,
+								preciseBuffer: buffers[property].preciseBuffer,
+								range: batchAttribute.range,
+							};
+							geometry.setAttribute(property, bufferAttribute);
+						}
+					} else{
 						const bufferAttribute = new THREE.BufferAttribute(new Float32Array(buffer), 1);
 
 						let batchAttribute = buffers[property].attribute;

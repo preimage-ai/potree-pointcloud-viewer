@@ -1111,19 +1111,19 @@ export class Renderer {
 					let attributes = octree.pcoGeometry.root.geometry.attributes;
 
 					if(attributes["gps-time"]){
-						defines.push("#define clip_gps_enabled");
+						//defines.push("#define clip_gps_enabled");
 					}
 
 					if(attributes["return number"]){
-						defines.push("#define clip_return_number_enabled");
+						//defines.push("#define clip_return_number_enabled");
 					}
 
 					if(attributes["number of returns"]){
-						defines.push("#define clip_number_of_returns_enabled");
+						//defines.push("#define clip_number_of_returns_enabled");
 					}
 
 					if(attributes["source id"] || attributes["point source id"]){
-						defines.push("#define clip_point_source_id_enabled");
+						//defines.push("#define clip_point_source_id_enabled");
 					}
 
 				}

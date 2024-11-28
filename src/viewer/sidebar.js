@@ -902,9 +902,9 @@ export class Sidebar{
 
 	initFilters(){
 		this.initClassificationList();
-		this.initReturnFilters();
-		this.initGPSTimeFilters();
-		this.initPointSourceIDFilters();
+		// this.initReturnFilters();
+		// this.initGPSTimeFilters();
+		// this.initPointSourceIDFilters();
 
 	}
 
