@@ -130,6 +130,7 @@ export class Images360 extends EventDispatcher{
 		this.selectingEnabled = false;
 
 		this.sphere.visible = false;
+		this.sphere.scale.set(1000, 1000, 1000);
 
 		this.load(image360).then( () => {
 			this.sphere.visible = true;
@@ -181,7 +182,8 @@ export class Images360 extends EventDispatcher{
 			return;
 		}
 
-
+		this.sphere.scale.set(0.01, 0.01, 0.01);
+		this.sphere.material = sm;
 		this.sphere.material.map = null;
 		this.sphere.material.needsUpdate = true;
 		this.sphere.visible = false;
@@ -198,7 +200,7 @@ export class Images360 extends EventDispatcher{
 		this.viewer.scene.view.setView(
 			previousView.position, 
 			previousView.target,
-			500
+			1500
 		);
 
 
