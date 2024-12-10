@@ -109,7 +109,25 @@ export class Images360 extends EventDispatcher{
 		return this._visible;
 	}
 
+	is360Enabled(){
+		let isChecked = false;
+		const images = $("#jstree_scene").jstree().get_node("images").children;
+		if(images.length > 0){
+			images.forEach(node => {
+				const image = $("#jstree_scene").jstree().get_node(node);
+				if (image.text === "360° images") {
+					isChecked = $("#jstree_scene").jstree("is_checked", image.id);
+				}
+			});
+		}
+		return isChecked;
+	}
+
 	focus(image360){
+		if (!this.is360Enabled()) {
+			console.warn(`Warn:  360° images is not checked`);
+			return;
+		}
 		if(this.focusedImage !== null){
 			this.unfocus();
 		}
@@ -161,7 +179,7 @@ export class Images360 extends EventDispatcher{
 		this.viewer.scene.view.setView(
 			newCamPos, 
 			target,
-			500
+			1000
 		);
 
 		this.focusedImage = image360;
@@ -200,7 +218,7 @@ export class Images360 extends EventDispatcher{
 		this.viewer.scene.view.setView(
 			previousView.position, 
 			previousView.target,
-			1500
+			1000
 		);
 
 
