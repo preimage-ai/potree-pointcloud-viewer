@@ -2779,19 +2779,39 @@ export class Viewer extends EventDispatcher{
 		const copiedScene = Object.assign(Object.create(Object.getPrototypeOf(originalScene)), originalScene);
 		
 		// Deep copy specific properties
-		copiedScene.scene = originalScene.scene ? originalScene.scene.clone() : null;
-  		copiedScene.sceneBG = originalScene.sceneBG ? originalScene.sceneBG.clone() : null;
+		// copiedScene.scene = originalScene.scene ? originalScene.scene.clone() : null;
+  		// copiedScene.sceneBG = originalScene.sceneBG ? originalScene.sceneBG.clone() : null;
   		
 		  if (originalScene.scenePointCloud) {
-			if (originalScene.pointclouds && originalScene.pointclouds.length > 0) {
+		// 	if (originalScene.pointclouds && originalScene.pointclouds.length > 0) {
 			
-			  copiedScene.scenePointCloud = originalScene.scenePointCloud.clone();
-			  copiedScene.pointclouds = originalScene.pointclouds.map(pc => pc.clone());
-			} else {
-			
+		// 	  copiedScene.scenePointCloud = originalScene.scenePointCloud.clone();
+		// 	  copiedScene.pointclouds = originalScene.pointclouds.map(pc => pc.clone());
+		// 	} else {
+			  copiedScene.scene = new THREE.Scene().copy(originalScene.scene);
+			  copiedScene.sceneBG = new THREE.Scene().copy(originalScene.sceneBG);
 			  copiedScene.scenePointCloud = new THREE.Scene().copy(originalScene.scenePointCloud);
+			//   copiedScene.view = Object.assign(new View(), originalScene.view);
 			  copiedScene.pointclouds = [];
-			}
+			  copiedScene.ifc = [];
+			  copiedScene.images360 = [];
+			  copiedScene.orientedImages = [];
+			  if (originalScene.cameraO) {
+				copiedScene.cameraO = new THREE.OrthographicCamera().copy(originalScene.cameraO);
+				}
+			  if (originalScene.cameraP) {
+				copiedScene.cameraP = new THREE.PerspectiveCamera().copy(originalScene.cameraP);
+				}
+			  if (originalScene.cameraScreenSpace) {
+				copiedScene.cameraScreenSpace = new THREE.OrthographicCamera().copy(originalScene.cameraScreenSpace);
+			  }
+			  if (originalScene.cameraVR) {
+				copiedScene.cameraVR = new THREE.PerspectiveCamera().copy(originalScene.cameraVR);
+			  }
+			  if (originalScene.cameraBG) {
+				copiedScene.cameraBG = new THREE.OrthographicCamera().copy(originalScene.cameraBG);
+			  }
+		// 	}
 		  } else {
 			copiedScene.scenePointCloud = null;
 			copiedScene.pointclouds = [];
