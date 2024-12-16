@@ -493,5 +493,202 @@ export class EDLRenderer{
 		viewer.dispatchEvent({type: "render.pass.end",viewer: viewer});
 
 	}
+
+	// splitRender(params) {
+	// 	this.initEDL();
+	// 	const viewer = this.viewer;
+	// 	let camera = params.camera ? params.camera : viewer.scene2.getActiveCamera();
+	// 	let camera1 = viewer.scene.getActiveCamera();
+	// 	const {width, height} = viewer.renderer.getSize(new THREE.Vector2());
+	
+	// 	// Calculate scissor dimensions
+	// 	const scissorWidth1 = viewer.splitWidth * viewer.scaleFactor;
+	// 	const scissorWidth2 = (width - viewer.splitWidth) * viewer.scaleFactor;
+	
+	// 	viewer.dispatchEvent({type: "render.pass.begin", viewer: viewer});
+		
+	// 	this.resize(width, height);
+	
+	// 	// Keep point clouds separate for each scene
+	// 	viewer.scene.pointclouds.forEach(pc => {
+	// 		console.log("pc", pc);
+	// 	});
+	// 	viewer.scene2.pointclouds.forEach(pc => {
+	// 		console.log("pc", pc);
+	// 	});
+	// 	const visiblePointClouds1 = viewer.scene.pointclouds.filter(pc => pc.visible);
+	// 	const visiblePointClouds2 = viewer.scene2.pointclouds.filter(pc => pc.visible);
+	
+	// 	if(this.screenshot) {
+	// 		let oldBudget = Potree.pointBudget;
+	// 		Potree.pointBudget = Math.max(10 * 1000 * 1000, 2 * oldBudget);
+	// 		// Update point clouds separately for each scene
+	// 		Potree.updatePointClouds(visiblePointClouds1, camera1, viewer.renderer);
+	// 		Potree.updatePointClouds(visiblePointClouds2, camera, viewer.renderer);
+	// 		Potree.pointBudget = oldBudget;
+	// 	}
+	
+	// 	let lights = [];
+	// 	viewer.scene.scene.traverse(node => {
+	// 		if(node.type === "SpotLight") lights.push(node);
+	// 	});
+	// 	viewer.scene2.scene.traverse(node => {
+	// 		if(node.type === "SpotLight") lights.push(node);
+	// 	});
+	
+	// 	// Enable scissor test
+	// 	viewer.renderer.setScissorTest(true);
+	
+	// 	// Handle backgrounds
+	// 	if(viewer.background === "skybox") {
+	// 		// Scene 1 background
+	// 		viewer.renderer.setScissor(0, 0, scissorWidth1, height);
+	// 		viewer.renderer.setViewport(0, 0, scissorWidth1, height);
+	// 		viewer.skybox.camera.rotation.copy(viewer.scene.cameraP.rotation);
+	// 		viewer.skybox.camera.fov = viewer.scene.cameraP.fov;
+	// 		viewer.skybox.camera.aspect = viewer.scene.cameraP.aspect;
+	// 		viewer.skybox.camera.updateProjectionMatrix();
+	// 		viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
+	
+	// 		// Scene 2 background
+	// 		viewer.renderer.setScissor(scissorWidth1, 0, scissorWidth2, height);
+	// 		viewer.renderer.setViewport(scissorWidth1, 0, scissorWidth2, height);
+	// 		viewer.skybox.camera.rotation.copy(viewer.scene2.cameraP.rotation);
+	// 		viewer.skybox.camera.fov = viewer.scene2.cameraP.fov;
+	// 		viewer.skybox.camera.aspect = viewer.scene2.cameraP.aspect;
+	// 		viewer.skybox.camera.updateProjectionMatrix();
+	// 		viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
+	// 	} else if (viewer.background === 'gradient') {
+	// 		// Scene 1 background
+	// 		viewer.renderer.setScissor(0, 0, scissorWidth1, height);
+	// 		viewer.renderer.setViewport(0, 0, scissorWidth1, height);
+	// 		viewer.renderer.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
+	
+	// 		// Scene 2 background
+	// 		viewer.renderer.setScissor(scissorWidth1, 0, scissorWidth2, height);
+	// 		viewer.renderer.setViewport(scissorWidth1, 0, scissorWidth2, height);
+	// 		viewer.renderer.render(viewer.scene2.sceneBG, viewer.scene2.cameraBG);
+	// 	}
+	
+	// 	// Setup point cloud materials for each scene separately
+	// 	const setupPointCloudMaterial = (pointcloud) => {
+	// 		let octreeSize = pointcloud.pcoGeometry.boundingBox.getSize(new THREE.Vector3()).x;
+	// 		let material = pointcloud.material;
+	// 		material.weighted = false;
+	// 		material.useLogarithmicDepthBuffer = false;
+	// 		material.useEDL = true;
+	// 		material.screenWidth = width;
+	// 		material.screenHeight = height;
+	// 		material.uniforms.visibleNodes.value = pointcloud.material.visibleNodesTexture;
+	// 		material.uniforms.octreeSize.value = octreeSize;
+	// 		material.spacing = pointcloud.pcoGeometry.spacing;
+	// 	};
+	
+	// 	// Setup materials separately for each scene
+	// 	visiblePointClouds1.forEach(setupPointCloudMaterial);
+	// 	visiblePointClouds2.forEach(setupPointCloudMaterial);
+	
+	// 	viewer.renderer.setRenderTarget(this.rtEDL);
+		
+	// 	// Scene 1 point clouds
+	// 	viewer.renderer.setScissor(0, 0, scissorWidth1, height);
+	// 	viewer.renderer.setViewport(0, 0, scissorWidth1, height);
+	// 	if(lights.length > 0) {
+	// 		console.log("viewer.pRenderer.render", viewer.pRenderer);
+	// 		viewer.pRenderer.render(viewer.scene.scenePointCloud, camera1, this.rtEDL, {
+	// 			clipSpheres: viewer.scene.volumes.filter(v => (v instanceof SphereVolume)),
+	// 			shadowMaps: [this.shadowMap],
+	// 			transparent: false,
+	// 		});
+	// 	} else {
+	// 		console.log("viewer.pRenderer.render else", viewer.pRenderer);
+	// 		viewer.pRenderer.render(viewer.scene.scenePointCloud, camera1, this.rtEDL, {
+	// 			clipSpheres: viewer.scene.volumes.filter(v => (v instanceof SphereVolume)),
+	// 			transparent: false,
+	// 		});
+	// 	}
+	
+	// 	// Scene 2 point clouds
+	// 	viewer.renderer.setScissor(scissorWidth1, 0, scissorWidth2, height);
+	// 	viewer.renderer.setViewport(scissorWidth1, 0, scissorWidth2, height);
+	// 	if(lights.length > 0) {
+	// 		viewer.pRenderer.render(viewer.scene2.scenePointCloud, camera, this.rtEDL, {
+	// 			clipSpheres: viewer.scene2.volumes.filter(v => (v instanceof SphereVolume)),
+	// 			shadowMaps: [this.shadowMap],
+	// 			transparent: false,
+	// 		});
+	// 	} else {
+	// 		viewer.pRenderer.render(viewer.scene2.scenePointCloud, camera, this.rtEDL, {
+	// 			clipSpheres: viewer.scene2.volumes.filter(v => (v instanceof SphereVolume)),
+	// 			transparent: false,
+	// 		});
+	// 	}
+	
+	// 	viewer.dispatchEvent({type: "render.pass.scene", viewer: viewer, renderTarget: this.rtRegular});
+	// 	viewer.renderer.setRenderTarget(null);
+		
+	// 	// Render main scenes
+	// 	viewer.renderer.setScissor(0, 0, scissorWidth1, height);
+	// 	viewer.renderer.setViewport(0, 0, scissorWidth1, height);
+	// 	viewer.renderer.render(viewer.scene.scene, camera1);
+	
+	// 	viewer.renderer.setScissor(scissorWidth1, 0, scissorWidth2, height);
+	// 	viewer.renderer.setViewport(scissorWidth1, 0, scissorWidth2, height);
+	// 	viewer.renderer.render(viewer.scene2.scene, camera);
+	
+	// 	// EDL PASS
+	// 	{
+	// 		const uniforms = this.edlMaterial.uniforms;
+	// 		uniforms.screenWidth.value = width;
+	// 		uniforms.screenHeight.value = height;
+	
+	// 		// Handle EDL pass for each scene separately
+	// 		// Scene 1
+	// 		viewer.renderer.setScissor(0, 0, scissorWidth1, height);
+	// 		viewer.renderer.setViewport(0, 0, scissorWidth1, height);
+	// 		let proj1 = camera1.projectionMatrix;
+	// 		uniforms.uProj.value = new Float32Array(proj1.elements);
+	// 		uniforms.uNear.value = camera1.near;
+	// 		uniforms.uFar.value = camera1.far;
+	// 		Utils.screenPass.render(viewer.renderer, this.edlMaterial);
+	
+	// 		// Scene 2
+	// 		viewer.renderer.setScissor(scissorWidth1, 0, scissorWidth2, height);
+	// 		viewer.renderer.setViewport(scissorWidth1, 0, scissorWidth2, height);
+	// 		let proj2 = camera.projectionMatrix;
+	// 		uniforms.uProj.value = new Float32Array(proj2.elements);
+	// 		uniforms.uNear.value = camera.near;
+	// 		uniforms.uFar.value = camera.far;
+	// 		Utils.screenPass.render(viewer.renderer, this.edlMaterial);
+	
+	// 		if(this.screenshot) {
+	// 			Utils.screenPass.render(viewer.renderer, this.edlMaterial, this.screenshot.target);
+	// 		}
+	// 	}
+	
+	// 	viewer.dispatchEvent({type: "render.pass.scene", viewer: viewer});
+	// 	viewer.renderer.clearDepth();
+	
+	// 	viewer.transformationTool.update();
+	// 	viewer.dispatchEvent({type: "render.pass.perspective_overlay", viewer: viewer});
+	
+	// 	// Scene 1 controls and tools
+	// 	viewer.renderer.setScissor(0, 0, scissorWidth1, height);
+	// 	viewer.renderer.setViewport(0, 0, scissorWidth1, height);
+	// 	viewer.renderer.render(viewer.controls.sceneControls, camera1);
+	// 	viewer.renderer.render(viewer.clippingTool.sceneVolume, camera1);
+	// 	viewer.renderer.render(viewer.transformationTool.scene, camera1);
+	
+	// 	// Scene 2 controls and tools
+	// 	viewer.renderer.setScissor(scissorWidth1, 0, scissorWidth2, height);
+	// 	viewer.renderer.setViewport(scissorWidth1, 0, scissorWidth2, height);
+	// 	viewer.renderer.render(viewer.controls.sceneControls, camera);
+	// 	viewer.renderer.render(viewer.clippingTool.sceneVolume, camera);
+	// 	viewer.renderer.render(viewer.transformationTool.scene, camera);
+		
+	// 	viewer.renderer.setScissorTest(false);
+		
+	// 	viewer.dispatchEvent({type: "render.pass.end", viewer: viewer});
+	// }
 }
 

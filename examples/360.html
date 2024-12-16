@@ -67,7 +67,7 @@
         };
 
 		// Load and add point cloud to scene
-		Potree.loadPointCloud(url, otherPath, "bj", e => {
+		Potree.loadPointCloud(url, otherPath, "ptcld", e => {
 			let scene = viewer.scene;
 			let pointcloud = e.pointcloud;
 			
@@ -81,26 +81,31 @@
 			scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
 
-			// run();
+			run();
 			
 		});
 
 		async function run(){
+			// const proj4 = Potree.proj4;
+			// proj4.defs("WGS84", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+			// proj4.defs("pointcloud", viewer.getProjection());
+			// let transform = proj4("WGS84", "pointcloud");
 
-			proj4.defs("WGS84", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-			proj4.defs("pointcloud", viewer.getProjection());
-			let transform = proj4("WGS84", "pointcloud");
+			// let params = {
+			// 	transform: transform
+			// };
 
-			let params = {
-				transform: transform
-			};
+			const url1 = 'potree';
 
 			// potree folder contains coordinates.txt
-			Potree.Images360Loader.test('potree', viewer, params).then( images => {
-				viewer.scene.add360Images(images);
-			});
-			
-		}
+			Potree.Images360Loader.testload(
+                  url1,
+				  viewer,
+                ).then((images) => {
+                  console.log("Loaded 360 images");
+                      viewer.scene.add360Images(images);
+                });
+			}
 
 
 		

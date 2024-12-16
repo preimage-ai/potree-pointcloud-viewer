@@ -68,6 +68,9 @@
 		Potree.loadPointCloud(url, otherPath, "ptcld", e => {
 			let scene = viewer.scene;
 			let pointcloud = e.pointcloud;
+			console.log("scene", pointcloud);
+			pointcloud.scale.set(2, 2, 2);
+			console.log("pointcloud split", pointcloud);
 			
 			let material = pointcloud.material;
 			material.size = 0.5;

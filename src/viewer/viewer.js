@@ -2005,6 +2005,7 @@ export class Viewer extends EventDispatcher{
 
 		{
 			if(this.showBoundingBox){
+				console.log("showBoundingBox", this.showBoundingBox);
 				let bbRoot = this.scene.scene.getObjectByName("potree_bounding_box_root");
 				if(!bbRoot){
 					let node = new THREE.Object3D();
@@ -2021,10 +2022,10 @@ export class Viewer extends EventDispatcher{
 					}
 				}
 
+
 				bbRoot.children = visibleBoxes;
 			}
 		}
-
 		if (!this.freeze) {
 			let result = Potree.updatePointClouds(scene.pointclouds, camera, this.renderer);
 
@@ -2244,6 +2245,353 @@ export class Viewer extends EventDispatcher{
 			performance.measure("update", "update-start", "update-end");
 		}
 	}
+
+	updateDuo(delta, timestamp) {
+		if (Potree.measureTimings) performance.mark("update-start");
+	
+		this.dispatchEvent({
+			type: 'update_start',
+			delta: delta,
+			timestamp: timestamp
+		});
+	
+		// Create Promises for updating each scene
+		const scene1UpdatePromise = new Promise((resolve) => {
+			const scene = this.scene;
+			const camera = scene.getActiveCamera();
+			const visiblePointClouds = scene.pointclouds.filter(pc => pc.visible);
+			
+			// Perform scene 1 updates
+			this.updateScenePointClouds(scene, camera, visiblePointClouds);
+
+			let controls = this.getControls();
+			if (controls !== null) {
+				controls.setScene(scene);
+				controls.update(delta);
+				
+				// Update camera positions and rotations
+				scene.cameraP.position.copy(scene.view.position);
+				scene.cameraP.rotation.order = "ZXY";
+				scene.cameraP.rotation.x = Math.PI / 2 + scene.view.pitch;
+				scene.cameraP.rotation.z = scene.view.yaw;
+				
+				scene.cameraO.position.copy(scene.view.position);
+				scene.cameraO.rotation.order = "ZXY";
+				scene.cameraO.rotation.x = Math.PI / 2 + scene.view.pitch;
+				scene.cameraO.rotation.z = scene.view.yaw;
+			}
+			
+			resolve();
+		});
+	
+		const scene2UpdatePromise = new Promise((resolve) => {
+			const scene = this.scene2;
+			const camera = scene.getActiveCamera();
+			const visiblePointClouds = scene.pointclouds.filter(pc => pc.visible);
+			
+			// Perform scene 2 updates
+			this.updateScenePointClouds(scene, camera, visiblePointClouds);
+
+			let controls = this.getControls();
+			if (controls !== null) {
+				controls.setScene(scene);
+				controls.update(delta);
+				
+				// Update camera positions and rotations
+				scene.cameraP.position.copy(scene.view.position);
+				scene.cameraP.rotation.order = "ZXY";
+				scene.cameraP.rotation.x = Math.PI / 2 + scene.view.pitch;
+				scene.cameraP.rotation.z = scene.view.yaw;
+				
+				scene.cameraO.position.copy(scene.view.position);
+				scene.cameraO.rotation.order = "ZXY";
+				scene.cameraO.rotation.x = Math.PI / 2 + scene.view.pitch;
+				scene.cameraO.rotation.z = scene.view.yaw;
+			}
+			
+			resolve();
+		});
+
+		const handleCameraChanges = (scene) => {
+			const camera = scene.getActiveCamera();
+			if (!this._previousCameras) {
+				this._previousCameras = new Map();
+			}
+			
+			const prevCamera = this._previousCameras.get(scene);
+			if (!prevCamera) {
+				this._previousCameras.set(scene, camera.clone());
+				return;
+			}
+	
+			if (!prevCamera.matrixWorld.equals(camera.matrixWorld) || 
+				!prevCamera.projectionMatrix.equals(camera.projectionMatrix)) {
+				this.dispatchEvent({
+					type: "camera_changed",
+					previous: prevCamera,
+					camera: camera,
+					scene: scene
+				});
+				
+				// Update previous camera
+				const newPrevCamera = camera.clone();
+				newPrevCamera.rotation.copy(camera.rotation);
+				this._previousCameras.set(scene, newPrevCamera);
+			}
+		};
+	
+		// Wait for both scene updates to complete
+		Promise.all([scene1UpdatePromise, scene2UpdatePromise]).then(() => {
+			// Perform shared updates after both scenes are processed
+			handleCameraChanges(this.scene);
+			handleCameraChanges(this.scene2);
+			this.performSharedUpdates(delta, timestamp);
+		});
+	}
+
+	updateScenePointClouds(scene, camera, visiblePointClouds) {
+		Potree.pointLoadLimit = Potree.pointBudget * 2;
+	
+		const lTarget = camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000));
+		scene.directionalLight.position.copy(camera.position);
+		scene.directionalLight.lookAt(lTarget);
+	
+		for (let pointcloud of visiblePointClouds) {
+			pointcloud.showBoundingBox = this.showBoundingBox;
+			pointcloud.generateDEM = this.generateDEM;
+			pointcloud.minimumNodePixelSize = this.minNodeSize;
+	
+			let material = pointcloud.material;
+	
+			material.uniforms.uFilterReturnNumberRange.value = this.filterReturnNumberRange;
+			material.uniforms.uFilterNumberOfReturnsRange.value = this.filterNumberOfReturnsRange;
+			material.uniforms.uFilterGPSTimeClipRange.value = this.filterGPSTimeRange;
+			material.uniforms.uFilterPointSourceIDClipRange.value = this.filterPointSourceIDRange;
+	
+			material.classification = this.classifications;
+			material.recomputeClassification();
+	
+			this.updateMaterialDefaults(pointcloud);
+		}
+
+	
+		// Handle bounding box visibility
+		{
+			if (this.showBoundingBox) {
+				let bbRoot = scene.scene.getObjectByName("potree_bounding_box_root");
+					if(!bbRoot){
+						let node = new THREE.Object3D();
+						node.name = "potree_bounding_box_root";
+						scene.scene.add(node);
+						bbRoot = node;
+					}
+	
+					let visibleBoxes = [];
+					for(let pointcloud of scene.pointclouds){
+						for(let node of pointcloud.visibleNodes.filter(vn => vn.boundingBoxNode !== undefined)){
+							let box = node.boundingBoxNode;
+							visibleBoxes.push(box);
+						}
+					}
+	
+					bbRoot.children = visibleBoxes;
+			}
+		}
+	
+		// Update point clouds if not frozen
+		if (!this.freeze) {
+			let result = Potree.updatePointClouds(scene.pointclouds, camera, this.renderer);
+
+
+			// DEBUG - ONLY DISPLAY NODES THAT INTERSECT MOUSE
+			//if(false){ 
+
+			//	let renderer = viewer.renderer;
+			//	let mouse = viewer.inputHandler.mouse;
+
+			//	let nmouse = {
+			//		x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
+			//		y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
+			//	};
+
+			//	let pickParams = {};
+
+			//	//if(params.pickClipped){
+			//	//	pickParams.pickClipped = params.pickClipped;
+			//	//}
+
+			//	pickParams.x = mouse.x;
+			//	pickParams.y = renderer.domElement.clientHeight - mouse.y;
+
+			//	let raycaster = new THREE.Raycaster();
+			//	raycaster.setFromCamera(nmouse, camera);
+			//	let ray = raycaster.ray;
+
+			//	for(let pointcloud of scene.pointclouds){
+			//		let nodes = pointcloud.nodesOnRay(pointcloud.visibleNodes, ray);
+			//		pointcloud.visibleNodes = nodes;
+
+			//	}
+			//}
+
+			// const tStart = performance.now();
+			// const worldPos = new THREE.Vector3();
+			// const camPos = viewer.scene.getActiveCamera().getWorldPosition(new THREE.Vector3());
+			// let lowestDistance = Infinity;
+			// let numNodes = 0;
+
+			// viewer.scene.scene.traverse(node => {
+			// 	node.getWorldPosition(worldPos);
+
+			// 	const distance = worldPos.distanceTo(camPos);
+
+			// 	lowestDistance = Math.min(lowestDistance, distance);
+
+			// 	numNodes++;
+
+			// 	if(Number.isNaN(distance)){
+			// 		console.error(":(");
+			// 	}
+			// });
+			// const duration = (performance.now() - tStart).toFixed(2);
+
+			// Potree.debug.computeNearDuration = duration;
+			// Potree.debug.numNodes = numNodes;
+
+			//console.log(lowestDistance.toString(2), duration);
+
+			const tStart = performance.now();
+			const campos = camera.position;
+			let closestImage = Infinity;
+			for(const images of scene.orientedImages){
+				for(const image of images.images){
+					const distance = image.mesh.position.distanceTo(campos);
+
+					closestImage = Math.min(closestImage, distance);
+				}
+			}
+			const tEnd = performance.now();
+
+			if(result.lowestSpacing !== Infinity){
+				let near = result.lowestSpacing * 10.0;
+				let far = -scene.getBoundingBox(visiblePointClouds).applyMatrix4(camera.matrixWorldInverse).min.z;
+
+				far = Math.max(far * 1.5, 10000);
+				near = Math.min(100.0, Math.max(0.01, near));
+				near = Math.min(near, closestImage);
+				far = Math.max(far, near + 10000);
+
+				if(near === Infinity){
+					near = 0.1;
+				}
+				
+				camera.near = near;
+				camera.far = far;
+			}else{
+				// don't change near and far in this case
+			}
+
+			if(scene.cameraMode == CameraMode.ORTHOGRAPHIC) {
+				camera.near = -camera.far;
+			}
+		}
+	}
+
+	performSharedUpdates(delta, timestamp) {
+		// Update clip boxes (if applicable to both scenes)
+		this.updateClipBoxes();
+	
+		// Update elevation gradient
+		this.updateElevationGradient();
+	
+		// Update navigation cube
+		this.navigationCube.update(this.scene.getActiveCamera().rotation);
+	
+		// Update annotations
+		this.updateAnnotations();
+	
+		// Update map view
+		if (this.mapView) {
+			this.mapView.update(delta);
+			if (this.mapView.sceneProjection) {
+				$("#potree_map_toggle").css("display", "block");
+			}
+		}
+	
+		// Update tweens
+		TWEEN.update(timestamp);
+	
+		// Dispatch update event
+		this.dispatchEvent({
+			type: 'update',
+			delta: delta,
+			timestamp: timestamp
+		});
+	
+		// Performance timing (if enabled)
+		if (Potree.measureTimings) {
+			performance.mark("update-end");
+			performance.measure("update", "update-start", "update-end");
+		}
+	}
+	
+	// Supporting methods
+	updateClipBoxes() {
+		let boxes = [];
+		
+		// Collect clip boxes from both scenes
+		boxes.push(...this.scene.volumes.filter(v => (v.clip && v instanceof BoxVolume)));
+		boxes.push(...this.scene2.volumes.filter(v => (v.clip && v instanceof BoxVolume)));
+	
+		// Profile segments from both scenes
+		for (let profile of this.scene.profiles) {
+			boxes.push(...profile.boxes);
+		}
+		for (let profile of this.scene2.profiles) {
+			boxes.push(...profile.boxes);
+		}
+		
+		let degenerate = (box) => box.matrixWorld.determinant() !== 0;
+		
+		let clipBoxes = boxes.filter(degenerate).map(box => {
+			box.updateMatrixWorld();
+			
+			let boxInverse = box.matrixWorld.clone().invert();
+			let boxPosition = box.getWorldPosition(new THREE.Vector3());
+	
+			return {box: box, inverse: boxInverse, position: boxPosition};
+		});
+	
+		let clipPolygons = [
+			...this.scene.polygonClipVolumes.filter(vol => vol.initialized),
+			...this.scene2.polygonClipVolumes.filter(vol => vol.initialized)
+		];
+		
+		// Apply clip volumes to point clouds in both scenes
+		const allVisiblePointClouds = [
+			...this.scene.pointclouds.filter(pc => pc.visible),
+			...this.scene2.pointclouds.filter(pc => pc.visible)
+		];
+	
+		for (let pointcloud of allVisiblePointClouds) {
+			pointcloud.material.setClipBoxes(clipBoxes);
+			pointcloud.material.setClipPolygons(clipPolygons, this.clippingTool.maxPolygonVertices);
+			pointcloud.material.clipTask = this.clipTask;
+			pointcloud.material.clipMethod = this.clipMethod;
+		}
+	}
+	
+	updateElevationGradient() {
+		const allVisiblePointClouds = [
+			...this.scene.pointclouds.filter(pc => pc.visible),
+			...this.scene2.pointclouds.filter(pc => pc.visible)
+		];
+	
+		for (let pointcloud of allVisiblePointClouds) {
+			pointcloud.material.elevationGradientRepeat = this.elevationGradientRepeat;
+		}
+	}
+
 	getPRenderer(){
 		if(this.useHQ){
 			if (!this.hqRenderer) {
@@ -2571,6 +2919,71 @@ export class Viewer extends EventDispatcher{
 	}
 		this.renderer.render(this.overlay, this.overlayCamera);
 	}
+
+	renderDefaultDuo(){
+		console.log("renderDefaultDuo");
+		let pRenderer = this.getPRenderer();
+
+		{ // resize
+			const width = this.scaleFactor * this.renderArea.clientWidth;
+			const height = this.scaleFactor * this.renderArea.clientHeight;
+
+			this.renderer.setSize(width, height);
+			const pixelRatio = this.renderer.getPixelRatio();
+		}
+
+
+    if (this.splitScreenEnabled) {
+		pRenderer.clear();
+		this.renderer.clear();
+        const width = this.scaleFactor * this.renderArea.clientWidth;
+		const height = this.scaleFactor * this.renderArea.clientHeight;
+
+		const scissorWidth1 = this.splitWidth * this.scaleFactor;
+		const scissorWidth2 = (width - this.splitWidth) * this.scaleFactor;
+
+		if (!this.overlayPtcld) {
+			const aspect1 = (scissorWidth1) / height;
+			const aspect2 = (scissorWidth2) / height;
+
+			const scene = this.scene;
+			const scene2 = this.scene2;
+
+			scene.cameraP.aspect = aspect1;
+			scene.cameraP.updateProjectionMatrix();
+			
+
+			scene2.cameraP.aspect = aspect2;
+			scene2.cameraP.updateProjectionMatrix();
+
+			let frustumScale = this.scene.view.radius;
+			scene.cameraO.left = -frustumScale;
+			scene.cameraO.right = frustumScale;
+			scene.cameraO.top = frustumScale * 1 / aspect1;
+			scene.cameraO.bottom = -frustumScale * 1 / aspect1;
+			scene.cameraO.updateProjectionMatrix();
+
+			let frustumScale2 = this.scene2.view.radius;
+			scene2.cameraO.left = -frustumScale2;
+			scene2.cameraO.right = frustumScale2;
+			scene2.cameraO.top = frustumScale2 * 1 / aspect2;
+			scene2.cameraO.bottom = -frustumScale2 * 1 / aspect2;
+			scene2.cameraO.updateProjectionMatrix();
+
+			scene.cameraScreenSpace.top = 1/aspect1;
+			scene.cameraScreenSpace.bottom = -1/aspect1;
+			scene.cameraScreenSpace.updateProjectionMatrix();
+
+			scene2.cameraScreenSpace.top = 1/aspect2;
+			scene2.cameraScreenSpace.bottom = -1/aspect2;
+			scene2.cameraScreenSpace.updateProjectionMatrix();
+		}
+		pRenderer.clear();
+        pRenderer.splitRender(this.renderer);
+    }
+		this.renderer.render(this.overlay, this.overlayCamera);
+	}
+
 	
 	render(){
 		if(Potree.measureTimings) performance.mark("render-start");
@@ -2583,6 +2996,29 @@ export class Viewer extends EventDispatcher{
 				this.renderVR();
 			}else{
 				this.renderDefault();
+			}
+
+		}catch(e){
+			this.onCrash(e);
+		}
+		
+		if(Potree.measureTimings){
+			performance.mark("render-end");
+			performance.measure("render", "render-start", "render-end");
+		}
+	}
+
+	renderDuo(){
+		if(Potree.measureTimings) performance.mark("render-start");
+
+		try{
+
+			const vrActive = this.renderer.xr.isPresenting;
+
+			if(vrActive){
+				this.renderVR();
+			}else{
+				this.renderDefaultDuo();
 			}
 
 		}catch(e){
@@ -2705,8 +3141,16 @@ export class Viewer extends EventDispatcher{
 			performance.mark("loop-start");
 		}
 
-		this.update(this.clock.getDelta(), timestamp);
-		this.render();
+		// this.debugPointCloudStatus();
+
+		if (!this.overlayPtcld) {
+			this.updateDuo(this.clock.getDelta(), timestamp);
+			this.render();
+		} else {
+			this.update(this.clock.getDelta(), timestamp);
+			this.render();
+		}
+
 
 		// let vrActive = viewer.renderer.xr.isPresenting;
 		// if(vrActive){
