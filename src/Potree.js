@@ -86,6 +86,7 @@ import {POCLoader} from "./loader/POCLoader.js";
 import {EptLoader} from "./loader/EptLoader.js";
 import {PointCloudOctree} from "./PointCloudOctree.js";
 import {WorkerPool} from "./WorkerPool.js";
+import * as THREE from "../libs/three.js/build/three.module.js";
 
 export const workerPool = new WorkerPool();
 
@@ -129,7 +130,7 @@ let resourcePath = scriptPath + '/resources';
 export {scriptPath, resourcePath};
 
 
-export function loadPointCloud(path, remainingPaths = undefined, name, callback){
+export function loadPointCloud(path, remainingPaths = undefined, matrix = [[]], name, callback){
 	let loaded = function(e){
 		e.pointcloud.name = name;
 		callback(e);
@@ -165,12 +166,22 @@ export function loadPointCloud(path, remainingPaths = undefined, name, callback)
 		} else if (path.indexOf('metadata.json') > 0) {
 			OctreeLoader.load(path, remainingPaths).then(e => {
 				let geometry = e.geometry;
-
 				if(!geometry){
 					console.error(new Error(`failed to load point cloud from URL: ${path}`));
 				}else{
 					let pointcloud = new PointCloudOctree(geometry);
-
+					if (matrix) {
+						const mat = new THREE.Matrix4();
+						mat.set(
+							matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+							matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+							matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+							matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+						);
+						pointcloud.applyMatrix4(mat);
+						pointcloud.updateMatrixWorld( true );
+					}
+					// console.log("pointcloud", pointcloud);
 					let aPosition = pointcloud.getAttribute("position");
 
 					let material = pointcloud.material;

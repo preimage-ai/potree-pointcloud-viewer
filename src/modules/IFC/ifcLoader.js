@@ -9,7 +9,7 @@ export class IFC {
 		this.ifcLoader.ifcManager.setWasmPath('../../../libs/three.js/extra/ifc/');
 	}
 
-	load(url, scene, name, visible = true){
+	load(url, scene, name, visible = true, matrix = [[]]){
 		return new Promise((resolve, reject) => {
 			this.ifcLoader.load(url, (model) => {
 				console.log("ifc loaded");
@@ -27,6 +27,19 @@ export class IFC {
 				
 				scene.scene.add(ambientLight,directionalLight1, directionalLight2, model.mesh);
 				model.visible = visible;
+				
+				if (matrix) {
+					const mat = new THREE.Matrix4();
+					mat.set(
+						matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+						matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+						matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+						matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+					);
+					model.mesh.applyMatrix4(mat);
+					model.mesh.updateMatrixWorld( true );
+				}
+
 				scene.addIfc(model.mesh);
 				resolve(model.mesh);
 			}, undefined, (error) => resolve(null));

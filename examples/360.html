@@ -50,12 +50,12 @@
 		Click on a sphere to enter 360 view. Click "unfocus" to leave 360 view. <br>
 		Point cloud courtesy of <a href="http://www.helimap.com/">Helimap System SA</a>. Images were downsized for this online demo; Original size is 8000x400.`);
 		
-		viewer.loadGUI(() => {
-			viewer.setLanguage('en');
-			// $("#menu_appearance").next().show();
-			// viewer.toggleSidebar();
-			// viewer.toggleMap();
-		});
+		// viewer.loadGUI(() => {
+		// 	viewer.setLanguage('en');
+		// 	// $("#menu_appearance").next().show();
+		// 	// viewer.toggleSidebar();
+		// 	// viewer.toggleMap();
+		// });
 
 		// keep your 360 data in example folder by potree name
 		const url = 'potree/metadata.json';
@@ -65,12 +65,19 @@
             octree: octreeUrl,
             hierarchy: hierarchyUrl,
         };
+		const matrix = [
+                [2, 0, 0, 0],
+                [0, 2, 0, 0],
+                [0, 0, 2, 0],
+                [0, 0, 0, 1]
+              ];
 
 		// Load and add point cloud to scene
-		Potree.loadPointCloud(url, otherPath, "bj", e => {
+		let pointcloud;
+		Potree.loadPointCloud(url, otherPath, matrix, "bj", e => {
 			let scene = viewer.scene;
-			let pointcloud = e.pointcloud;
-			
+			pointcloud = e.pointcloud;
+			console.log("pointcloud", pointcloud);
 			let material = pointcloud.material;
 			material.size = 0.5;
 			material.minSize = 2.0;
@@ -81,7 +88,7 @@
 			scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
 
-			// run();
+			run();
 			
 		});
 
@@ -95,8 +102,22 @@
 				transform: transform
 			};
 
+			console.log("Transform", transform);
+
 			// potree folder contains coordinates.txt
-			Potree.Images360Loader.test('potree', viewer, params).then( images => {
+			Potree.Images360Loader.testload('potree', viewer, params, matrix).then( images => {
+				console.log("Loaded 360 images", images);
+				
+				// const mat = new THREE.Matrix4();
+				// 		mat.set(
+				// 			matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+				// 			matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+				// 			matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+				// 			matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+				// 		);
+				// images.node.applyMatrix4(mat);
+				// images.node.updateMatrixWorld( true );
+
 				viewer.scene.add360Images(images);
 			});
 			

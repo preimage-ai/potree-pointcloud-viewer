@@ -118,7 +118,7 @@
 			viewer.scene2.addPointCloud(pointcloud);
 			viewer.fitToScreen();
 
-			run2();
+			// run2();
 		});
 		const url2 = 'potree/metadata.json';
         const hierarchyUrl2 = 'potree/hierarchy.bin';
@@ -128,10 +128,12 @@
             hierarchy: hierarchyUrl2,
         };
 
-		Potree.loadPointCloud(url2, otherPath2, "ptcld", e => {
+		Potree.loadPointCloud(url, otherPath, "ptcld", e => {
 			// let scene2 = viewer.scene2;
 			let pointcloud = e.pointcloud;
-			console.log("pointcloud split", pointcloud);
+			// console.log("scene", pointcloud);
+			// pointcloud.scale.set(2, 2, 2);
+			// console.log("pointcloud split", pointcloud);
 			let material = pointcloud.material;
 			material.size = 0.5;
 			material.minSize = 2.0;
@@ -142,14 +144,16 @@
 			viewer.scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
 
-			run();
+			// run();
 		});
-		ifc.load('sanskar/information.ifc', viewer.scene2, "ifc-split")
-												.then(mesh => console.log("loaded mesh", mesh));
+		// ifc.load('sanskar/information.ifc', viewer.scene2, "ifc-split")
+		// 										.then(mesh => console.log("loaded mesh", mesh));
 
         viewer.splitPane();
 		viewer.splitPaneResize(viewer.renderArea.clientWidth / 2);
 		viewer.splitPaneOverlay(false);
+		console.log("scene", viewer.scene);
+		console.log("scene2", viewer.scene2);
 
 		async function run(){
 			// const proj4 = Potree.proj4;

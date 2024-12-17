@@ -288,7 +288,7 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, imageUrls, params = {}){
+	static async load(url, viewer, imageUrls, params = {}, matrix = [[]]){
 		
 		if(!params.transform){
 			params.transform = {
@@ -334,13 +334,26 @@ export class Images360Loader{
 			images360.images.push(image360);
 		}
 
+
+
 		Images360Loader.createSceneNodes(images360, params.transform);
 
+		if(matrix){
+			const mat = new THREE.Matrix4();
+			mat.set(
+				matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+				matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+				matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+				matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+			);
+			images360.node.applyMatrix4(mat);
+			images360.node.updateMatrixWorld( true );
+		}
 		return images360;
 
 	}
 
-	static async testload(url, viewer, params = {}){
+	static async testload(url, viewer, params = {}, matrix = [[]]){
 
 		if(!params.transform){
 			params.transform = {
@@ -386,7 +399,17 @@ export class Images360Loader{
 		}
 
 		Images360Loader.createSceneNodes(images360, params.transform);
-
+		if(matrix){
+			const mat = new THREE.Matrix4();
+			mat.set(
+				matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+				matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+				matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+				matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+			);
+			images360.node.applyMatrix4(mat);
+			images360.node.updateMatrixWorld( true );
+		}
 		return images360;
 
 	}
