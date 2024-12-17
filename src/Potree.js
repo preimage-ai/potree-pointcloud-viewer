@@ -130,7 +130,7 @@ let resourcePath = scriptPath + '/resources';
 export {scriptPath, resourcePath};
 
 
-export function loadPointCloud(path, remainingPaths = undefined, matrix = [[]], name, callback){
+export function loadPointCloud(path, remainingPaths = undefined, matrix = [], name, callback){
 	let loaded = function(e){
 		e.pointcloud.name = name;
 		callback(e);
@@ -170,7 +170,7 @@ export function loadPointCloud(path, remainingPaths = undefined, matrix = [[]], 
 					console.error(new Error(`failed to load point cloud from URL: ${path}`));
 				}else{
 					let pointcloud = new PointCloudOctree(geometry);
-					if (matrix) {
+					if (matrix && matrix.length > 0) {
 						const mat = new THREE.Matrix4();
 						mat.set(
 							matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
