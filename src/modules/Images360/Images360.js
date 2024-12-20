@@ -288,7 +288,7 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, imageUrls, params = {}, matrix = [[]]){
+	static async load(url, viewer, imageUrls, params = {}, matrix = []){
 		
 		if(!params.transform){
 			params.transform = {
@@ -338,7 +338,7 @@ export class Images360Loader{
 
 		Images360Loader.createSceneNodes(images360, params.transform);
 
-		if(matrix){
+		if(matrix && matrix.length > 0){
 			const mat = new THREE.Matrix4();
 			mat.set(
 				matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
