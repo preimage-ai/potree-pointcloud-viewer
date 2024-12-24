@@ -51,6 +51,7 @@ export class Viewer extends EventDispatcher{
 		this.guiLoadTasks = [];
 
 		this.onVrListeners = [];
+		this.extMeasureScale = 1;
 
 		this.messages = [];
 		this.elMessages = $(`
@@ -848,6 +849,12 @@ export class Viewer extends EventDispatcher{
 				this.lengthUnitDisplay = LengthUnits.INCH;
 				break;
 		}
+
+		this.dispatchEvent({ 'type': 'length_unit_changed', 'viewer': this, value: lengthUnitValue });
+	};
+
+	setScaledLengthUnitAndDisplayUnit(scale = 1) {
+		const type = {}
 
 		this.dispatchEvent({ 'type': 'length_unit_changed', 'viewer': this, value: lengthUnitValue });
 	};
@@ -2864,6 +2871,10 @@ export class Viewer extends EventDispatcher{
 	splitPaneOverlay(overlayPtcld){
 		this.overlayPtcld = overlayPtcld;
 		this.loop();
+	}
+
+	setExternalMeasureScale(scale){
+		this.extMeasureScale = scale;
 	}
 
 };

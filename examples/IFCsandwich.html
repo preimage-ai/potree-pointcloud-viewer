@@ -65,15 +65,15 @@
         };
 		// Load and add point cloud to scene
 		const matrix = [
-                [2, 0, 0, 0],
-                [0, 2, 0, 0],
-                [0, 0, 2, 0],
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
                 [0, 0, 0, 1]
               ];
 		Potree.loadPointCloud(url, otherPath, matrix, "ptcld", e => {
 			let scene = viewer.scene;
 			let pointcloud = e.pointcloud;
-			console.log("scene", pointcloud);
+			console.log("scene", viewer.scene);
 
 						// const mat = new THREE.Matrix4();
 						// mat.set(
@@ -91,7 +91,7 @@
 			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
 			material.shape = Potree.PointShape.SQUARE;
 			material.activeAttributeName = "rgba";
-			
+			viewer.setExternalMeasureScale(3);
 			scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
 			
@@ -106,10 +106,10 @@
 			
 		// });
 
-		ifc.load('sanskar/information.ifc', viewer.scene, "ifc", true, matrix)
-												.then(mesh => {
-													console.log("loaded mesh", mesh);
-												});
+		// ifc.load('sanskar/information.ifc', viewer.scene, "ifc", true, matrix)
+		// 										.then(mesh => {
+		// 											console.log("loaded mesh", mesh);
+		// 										});
 		
 	</script>
 	
