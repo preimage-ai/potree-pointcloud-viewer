@@ -59,12 +59,8 @@ export class Viewer extends EventDispatcher{
 		this.fov=0;
 		this.shouldFocus=false;
 		this.onVrListeners = [];
-<<<<<<< HEAD
 		this.extMeasureScale = 1;
-
-=======
         this.rotateInterpolate=0;
->>>>>>> 95543b8c3d7fc1eb918b8261c3797ca84a07468c
 		this.messages = [];
 		this.elMessages = $(`
 		<div id="message_listing" 
