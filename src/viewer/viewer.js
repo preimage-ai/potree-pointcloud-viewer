@@ -49,9 +49,17 @@ export class Viewer extends EventDispatcher{
 		this.overlayPtcld = true;
 		this.guiLoaded = false;
 		this.guiLoadTasks = [];
-
+		this.cameraX = 10;
+        this.cameraY = -15;
+        this.cameraZ = 30;
+		this.qX=0;
+		this.qY=0;
+		this.qZ=0;
+		this.interpolate=0;
+		this.fov=0;
+		this.shouldFocus=false;
 		this.onVrListeners = [];
-
+        this.rotateInterpolate=0;
 		this.messages = [];
 		this.elMessages = $(`
 		<div id="message_listing" 
@@ -482,6 +490,11 @@ export class Viewer extends EventDispatcher{
 	};
 
 	setControls(controls){
+		if(controls==null){
+			this.inputHandler.removeInputListener(this.controls);
+			this.controls=null;
+			return;
+		}
 		if (controls !== this.controls) {
 			if (this.controls) {
 				this.controls.enabled = false;
@@ -1681,7 +1694,7 @@ export class Viewer extends EventDispatcher{
 
 	}
 
-	update(delta, timestamp){
+	 update(delta, timestamp){
 		if (this.splitScreenEnabled) {
 			if(Potree.measureTimings) performance.mark("update-start");
 
@@ -1844,13 +1857,14 @@ export class Viewer extends EventDispatcher{
 		this.scene2.cameraP.fov = this.fov;
 		
 		let controls = this.getControls();
-		if (controls === this.deviceControls) {
+		//console.log("This is controls.enabled "+controls.enabled);
+		 if (controls === this.deviceControls) {
 			this.controls.setScene(scene);
 			this.controls.update(delta);
 
 			this.scene2.cameraP.position.copy(scene.view.position);
 			this.scene2.cameraO.position.copy(scene.view.position);
-		} else if (controls !== null) {
+		} else if (controls !== null && controls.enabled==true) {
 			controls.setScene(scene);
 			controls.update(delta);
 
@@ -2123,15 +2137,24 @@ export class Viewer extends EventDispatcher{
 		} 
 		
 		this.scene.cameraP.fov = this.fov;
-		
 		let controls = this.getControls();
-		if (controls === this.deviceControls) {
-			this.controls.setScene(scene);
-			this.controls.update(delta);
+		//console.log("This is controls.enabled "+controls.enabled);
+		if (controls === this.deviceControls && controls.enabled==true) {
+			controls.setScene(scene);
+			controls.update(delta);
 
 			this.scene.cameraP.position.copy(scene.view.position);
 			this.scene.cameraO.position.copy(scene.view.position);
 		} else if (controls !== null) {
+			if(this.shouldFocus==true){
+				controls.setScene(scene);
+			controls.update(delta);
+			if(typeof debugDisabled === "undefined" )
+			this.scene.cameraP.position.copy(scene.view.position);
+
+			this.scene.cameraO.position.copy(scene.view.position);
+			}
+			if(controls.enabled==true){
 			controls.setScene(scene);
 			controls.update(delta);
 
@@ -2146,6 +2169,7 @@ export class Viewer extends EventDispatcher{
 			this.scene.cameraO.rotation.order = "ZXY";
 			this.scene.cameraO.rotation.x = Math.PI / 2 + this.scene.view.pitch;
 			this.scene.cameraO.rotation.z = this.scene.view.yaw;
+		}
 		}
 		
 		camera.updateMatrix();
@@ -2243,7 +2267,7 @@ export class Viewer extends EventDispatcher{
 			performance.mark("update-end");
 			performance.measure("update", "update-start", "update-end");
 		}
-	}
+}
 	getPRenderer(){
 		if(this.useHQ){
 			if (!this.hqRenderer) {
@@ -2428,7 +2452,22 @@ export class Viewer extends EventDispatcher{
 		renderer.resetState();
 
 	}
-
+    convertEuler(x,y,z,w){
+		const xQuaternion = new THREE.Quaternion();
+		xQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(x));
+		
+		const yQuaternion = new THREE.Quaternion();
+		yQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(y ));
+		
+		const zQuaternion = new THREE.Quaternion();
+		zQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(e ));
+		
+		// Combine the quaternions
+		const resultQuaternion = new THREE.Quaternion();
+		resultQuaternion.multiplyQuaternions(xQuaternion, yQuaternion);
+		resultQuaternion.multiply(zQuaternion);
+		return resultQuaternion;
+	}
 	renderDefault(){
 		let pRenderer = this.getPRenderer();
 
@@ -2439,8 +2478,27 @@ export class Viewer extends EventDispatcher{
 			this.renderer.setSize(width, height);
 			const pixelRatio = this.renderer.getPixelRatio();
 		}
-
-
+		let camera =this.scene.getActiveCamera();
+ if(this.shouldFocus==false){
+    
+	  const targetPosition = new THREE.Vector3(this.cameraX, this.cameraY, this.cameraZ);
+	  camera.position.lerp(targetPosition, this.interpolate);
+	}
+      camera.fov=this.fov;
+	  // Rotation Lerping with Quaternions
+	  const euler = new THREE.Euler(
+		  THREE.MathUtils.degToRad(this.qX),
+		  THREE.MathUtils.degToRad(this.qY),
+		  THREE.MathUtils.degToRad(this.qZ),
+		  "ZYX"
+	  );
+	  // Convert target rotation to Quaternion
+	  const targetQuaternion = new THREE.Quaternion().setFromEuler(euler);
+	  // Interpolate rotation
+	  camera.quaternion.slerp(targetQuaternion, this.rotateInterpolate);
+	  camera.updateProjectionMatrix();
+	  //console.log("this is it "+"qx "+this.qX+ " "+THREE.MathUtils.degToRad(this.qX)+"qx "+this.qY+ " "+THREE.MathUtils.degToRad(this.qY)+"qx "+this.qZ+ " "+THREE.MathUtils.degToRad(this.qZ));
+	//console.log("this is the new camera position "+camera.position.x);
     if (this.splitScreenEnabled) {
 		pRenderer.clear();
 		this.renderer.clear();
@@ -2844,7 +2902,26 @@ export class Viewer extends EventDispatcher{
 		}
 
 	};
+    changeCamera(x,y,z,interpolation){
+    this.cameraX=x;
+	this.cameraY=y;
+	this.cameraZ=z;
+	this.interpolate=interpolation
+	
+	}
 
+	changeFov(fov){
+     this.fov=fov;
+	}
+
+	changeRotation(x,y,z,interpolate,isFocused){
+       this.qX=x;
+	   this.qY=y;
+	   this.qZ=z;
+       this.rotateInterpolate=interpolate;
+	   this.shouldFocus=isFocused;
+	   //console.log("This is the qz in changeRotation "+this.qz);
+	}
 	splitPane(){
 		// scene2 = this.deepCopyScene(this.scene);
 		console.log("split pane");

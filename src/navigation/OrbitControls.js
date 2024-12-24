@@ -37,7 +37,7 @@ export class OrbitControls extends EventDispatcher{
 		this.pitchDelta = 0;
 		this.panDelta = new THREE.Vector2(0, 0);
 		this.radiusDelta = 0;
-
+        this.enabled=true;
 		this.doubleClockZoomEnabled = true;
 
 		this.tweens = [];
@@ -291,7 +291,7 @@ export class OrbitControls extends EventDispatcher{
 
 		{
 			let speed = view.radius;
-			this.viewer.setMoveSpeed(speed);
+	this.viewer.setMoveSpeed(speed);
 		}
 
 		{ // decelerate over time
