@@ -128,6 +128,9 @@ export class Images360 extends EventDispatcher{
 			console.warn(`Warn:  360° images is not checked`);
 			return;
 		}
+		if (this.focusedImage === image360){
+			return;
+		}
 		if(this.focusedImage !== null){
 			this.unfocus();
 		}
@@ -142,10 +145,11 @@ export class Images360 extends EventDispatcher{
 		this.viewer.orbitControls.doubleClockZoomEnabled = false;
 
 		for(let image of this.images){
-			image.mesh.visible = false;
+			image.mesh.scale.set(0.3, 0.3, 0.3);
 		}
+		image360.mesh.visible = false;
 
-		this.selectingEnabled = false;
+		this.selectingEnabled = true;
 
 		this.sphere.visible = false;
 		this.sphere.scale.set(1000, 1000, 1000);
@@ -192,6 +196,7 @@ export class Images360 extends EventDispatcher{
 
 		for(let image of this.images){
 			image.mesh.visible = true;
+			image.mesh.scale.set(1, 1, 1);
 		}
 
 		let image = this.focusedImage;
@@ -206,18 +211,23 @@ export class Images360 extends EventDispatcher{
 		this.sphere.material.needsUpdate = true;
 		this.sphere.visible = false;
 
-		let pos = this.viewer.scene.view.position;
-		let target = this.viewer.scene.view.getPivot();
-		let dir = target.clone().sub(pos).normalize();
-		let move = dir.multiplyScalar(10);
-		let newCamPos = target.clone().sub(move);
+		// let pos = this.viewer.scene.view.position;
+		// let target = this.viewer.scene.view.getPivot();
+		// let dir = target.clone().sub(pos).normalize();
+		// let move = dir.multiplyScalar(10);
+		// let newCamPos = target.clone().sub(move);
 
 		this.viewer.orbitControls.doubleClockZoomEnabled = true;
 		this.viewer.setControls(previousView.controls);
 
+		let target = this.viewer.scene.view.getPivot();
+		let dir = target.clone().sub(this.viewer.scene.view.position).normalize();
+		let move = dir.multiplyScalar(50);
+		let newCamPos = target.clone().sub(move);
+
 		this.viewer.scene.view.setView(
-			previousView.position, 
-			previousView.target,
+			newCamPos, 
+			target,
 			1000
 		);
 
@@ -259,9 +269,19 @@ export class Images360 extends EventDispatcher{
 			return;
 		}
 
-		let intersection = intersections[0];
-		currentlyHovered = intersection.object;
-		currentlyHovered.material = smHovered;
+		// let intersection = intersections[0];
+		// currentlyHovered = intersection.object;
+		// currentlyHovered.material = smHovered;
+
+		if(intersections.length >= 3){
+			let intersection = intersections[1];
+			currentlyHovered = intersection.object;
+			currentlyHovered.material = smHovered;
+		} else {
+			let intersection = intersections[0];
+			currentlyHovered = intersection.object;
+			currentlyHovered.material = smHovered;
+		}
 
 		//label.visible = true;
 		//label.setText(currentlyHovered.image360.file);
