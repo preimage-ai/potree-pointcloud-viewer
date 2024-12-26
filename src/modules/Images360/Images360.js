@@ -109,7 +109,28 @@ export class Images360 extends EventDispatcher{
 		return this._visible;
 	}
 
+	is360Enabled(){
+		let isChecked = false;
+		const images = $("#jstree_scene").jstree().get_node("images").children;
+		if(images.length > 0){
+			images.forEach(node => {
+				const image = $("#jstree_scene").jstree().get_node(node);
+				if (image.text === "360° images") {
+					isChecked = $("#jstree_scene").jstree("is_checked", image.id);
+				}
+			});
+		}
+		return isChecked;
+	}
+
 	focus(image360){
+		if (!this.is360Enabled()) {
+			console.warn(`Warn:  360° images is not checked`);
+			return;
+		}
+		if (this.focusedImage === image360){
+			return;
+		}
 		if(this.focusedImage !== null){
 			this.unfocus();
 		}
@@ -124,12 +145,14 @@ export class Images360 extends EventDispatcher{
 		this.viewer.orbitControls.doubleClockZoomEnabled = false;
 
 		for(let image of this.images){
-			image.mesh.visible = false;
+			image.mesh.scale.set(0.3, 0.3, 0.3);
 		}
+		image360.mesh.visible = false;
 
-		this.selectingEnabled = false;
+		this.selectingEnabled = true;
 
 		this.sphere.visible = false;
+		this.sphere.scale.set(1000, 1000, 1000);
 
 		this.load(image360).then( () => {
 			this.sphere.visible = true;
@@ -160,7 +183,7 @@ export class Images360 extends EventDispatcher{
 		this.viewer.scene.view.setView(
 			newCamPos, 
 			target,
-			500
+			1000
 		);
 
 		this.focusedImage = image360;
@@ -173,6 +196,7 @@ export class Images360 extends EventDispatcher{
 
 		for(let image of this.images){
 			image.mesh.visible = true;
+			image.mesh.scale.set(1, 1, 1);
 		}
 
 		let image = this.focusedImage;
@@ -181,24 +205,30 @@ export class Images360 extends EventDispatcher{
 			return;
 		}
 
-
+		this.sphere.scale.set(0.01, 0.01, 0.01);
+		this.sphere.material = sm;
 		this.sphere.material.map = null;
 		this.sphere.material.needsUpdate = true;
 		this.sphere.visible = false;
 
-		let pos = this.viewer.scene.view.position;
-		let target = this.viewer.scene.view.getPivot();
-		let dir = target.clone().sub(pos).normalize();
-		let move = dir.multiplyScalar(10);
-		let newCamPos = target.clone().sub(move);
+		// let pos = this.viewer.scene.view.position;
+		// let target = this.viewer.scene.view.getPivot();
+		// let dir = target.clone().sub(pos).normalize();
+		// let move = dir.multiplyScalar(10);
+		// let newCamPos = target.clone().sub(move);
 
 		this.viewer.orbitControls.doubleClockZoomEnabled = true;
 		this.viewer.setControls(previousView.controls);
 
+		let target = this.viewer.scene.view.getPivot();
+		let dir = target.clone().sub(this.viewer.scene.view.position).normalize();
+		let move = dir.multiplyScalar(50);
+		let newCamPos = target.clone().sub(move);
+
 		this.viewer.scene.view.setView(
-			previousView.position, 
-			previousView.target,
-			500
+			newCamPos, 
+			target,
+			1000
 		);
 
 
@@ -239,9 +269,19 @@ export class Images360 extends EventDispatcher{
 			return;
 		}
 
-		let intersection = intersections[0];
-		currentlyHovered = intersection.object;
-		currentlyHovered.material = smHovered;
+		// let intersection = intersections[0];
+		// currentlyHovered = intersection.object;
+		// currentlyHovered.material = smHovered;
+
+		if(intersections.length >= 3){
+			let intersection = intersections[1];
+			currentlyHovered = intersection.object;
+			currentlyHovered.material = smHovered;
+		} else {
+			let intersection = intersections[0];
+			currentlyHovered = intersection.object;
+			currentlyHovered.material = smHovered;
+		}
 
 		//label.visible = true;
 		//label.setText(currentlyHovered.image360.file);
@@ -268,7 +308,7 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, imageUrls, params = {}){
+	static async load(url, viewer, imageUrls, params = {}, matrix = []){
 		
 		if(!params.transform){
 			params.transform = {
@@ -314,13 +354,26 @@ export class Images360Loader{
 			images360.images.push(image360);
 		}
 
+
+
 		Images360Loader.createSceneNodes(images360, params.transform);
 
+		if(matrix && matrix.length > 0){
+			const mat = new THREE.Matrix4();
+			mat.set(
+				matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+				matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+				matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+				matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+			);
+			images360.node.applyMatrix4(mat);
+			images360.node.updateMatrixWorld( true );
+		}
 		return images360;
 
 	}
 
-	static async testload(url, viewer, params = {}){
+	static async testload(url, viewer, params = {}, matrix = []){
 
 		if(!params.transform){
 			params.transform = {
@@ -366,7 +419,17 @@ export class Images360Loader{
 		}
 
 		Images360Loader.createSceneNodes(images360, params.transform);
-
+		if(matrix && matrix.length > 0){
+			const mat = new THREE.Matrix4();
+			mat.set(
+				matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+				matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+				matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+				matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+			);
+			images360.node.applyMatrix4(mat);
+			images360.node.updateMatrixWorld( true );
+		}
 		return images360;
 
 	}

@@ -281,11 +281,11 @@ function createAzimuth(){
 }
 
 export class Measure extends THREE.Object3D {
-	constructor () {
+	constructor (viewer) {
 		super();
 
 		this.constructor.counter = (this.constructor.counter === undefined) ? 0 : this.constructor.counter + 1;
-
+		this.viewer = viewer;
 		this.name = 'Measure_' + this.constructor.counter;
 		this.points = [];
 		this._showDistances = true;
@@ -675,8 +675,7 @@ export class Measure extends THREE.Object3D {
 				let center = new THREE.Vector3().add(point.position);
 				center.add(nextPoint.position);
 				center = center.multiplyScalar(0.5);
-				let distance = point.position.distanceTo(nextPoint.position);
-
+				let distance = point.position.distanceTo(nextPoint.position) * this.viewer.extMeasureScale;
 				edgeLabel.position.copy(center);
 
 				let suffix = "";
@@ -750,7 +749,7 @@ export class Measure extends THREE.Object3D {
 
 				let suffix = "";
 				if(this.lengthUnit != null && this.lengthUnitDisplay != null){
-					height = height / this.lengthUnit.unitspermeter * this.lengthUnitDisplay.unitspermeter;  //convert to meters then to the display unit
+					height = height * this.viewer.extMeasureScale / this.lengthUnit.unitspermeter * this.lengthUnitDisplay.unitspermeter;  //convert to meters then to the display unit
 					suffix = this.lengthUnitDisplay.code;
 				}
 

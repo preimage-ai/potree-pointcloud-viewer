@@ -433,7 +433,6 @@ export class Utils {
 		
 		for(let pointcloud of pointclouds){
 			let point = pointcloud.pick(viewer, camera, ray, pickParams);
-			console.log("point pick, pickParams", point, pickParams);
 			if(!point){
 				continue;
 			}
