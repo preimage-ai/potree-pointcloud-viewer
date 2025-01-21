@@ -308,7 +308,7 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, imageUrls, params = {}, matrix = []){
+	static async load(url, viewer, s3Path, params = {}, matrix = []){
 		
 		if(!params.transform){
 			params.transform = {
@@ -340,10 +340,8 @@ export class Images360Loader{
 			course = parseFloat(course);
 			pitch = parseFloat(pitch);
 			roll = parseFloat(roll);
-
 			filename = filename.replace(/"/g, "");
-			filename = filename.split("/").pop();
-			let file = imageUrls[filename];
+			let file = s3Path + filename;
 
 			let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
 
