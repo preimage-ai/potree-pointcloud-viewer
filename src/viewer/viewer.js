@@ -62,6 +62,7 @@ export class Viewer extends EventDispatcher{
 		this.extMeasureScale = 1;
         this.rotateInterpolate=0;
 		this.messages = [];
+		this.unityView=false;
 		this.elMessages = $(`
 		<div id="message_listing" 
 			style="position: absolute; z-index: 1000; left: 10px; bottom: 10px">
@@ -96,7 +97,7 @@ export class Viewer extends EventDispatcher{
 
 			if ($(domElement).find('#potree_quick_buttons').length === 0) {
 				let potreeMap = $(`
-					<div id="potree_quick_buttons" class="quick_buttons_container" style="">
+					<div id="potree_quick_buttons" class="quick_buttons_container" style="display : none">
 					</div>
 				`);
 
@@ -195,6 +196,9 @@ export class Viewer extends EventDispatcher{
 		this.skybox = null;
 		this.clock = new THREE.Clock();
 		this.background = null;
+		this.miniMapTop=0;
+		this.miniMapBottom=0;
+		this.miniMapSize=0;
 
 		this.initThree();
 
@@ -2928,6 +2932,20 @@ export class Viewer extends EventDispatcher{
        this.rotateInterpolate=interpolate;
 	   this.shouldFocus=isFocused;
 	   //console.log("This is the qz in changeRotation "+this.qz);
+	}
+	
+	setUnityView(isUnityView){
+		this.unityView=isUnityView;
+	}
+
+	miniMapPosition(top, botton, size,url){
+		this.miniMapTop=top;
+		this.miniMapBottom=botton;
+		this.miniMapSize=size;
+		this.mapView.changeMiniMapPosition(top, botton, size,url);
+	}
+    isUnityView(){
+		return this.unityView;
 	}
 	splitPane(){
 		// scene2 = this.deepCopyScene(this.scene);

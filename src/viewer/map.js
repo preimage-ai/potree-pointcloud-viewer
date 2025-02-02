@@ -44,6 +44,7 @@ export class MapView{
 		this.sourcesLabelLayer = null;
 		this.images360Layer = null;
 		this.enabled = false;
+		this.calledOnce = false;
 
 		this.createAnnotationStyle = (text) => {
 			return [
@@ -211,10 +212,10 @@ export class MapView{
 				new ol.layer.Tile({source: new ol.source.OSM()}),
 				this.toolLayer,
 				this.annotationsLayer,
-				this.sourcesLayer,
-				this.sourcesLabelLayer,
+				//this.sourcesLayer,
+				//this.sourcesLabelLayer,
 				this.images360Layer,
-				extentsLayer,
+				//extentsLayer,
 				cameraLayer
 			],
 			target: 'potree_map_content',
@@ -332,6 +333,11 @@ export class MapView{
 			};
 			this.getAnnotationsLayer().getSource().addFeature(feature);
 		};
+		// this.map.getView().fit(extentsLayer.getSource().getExtent(), {
+		// 	size: this.map.getSize(),
+		// 	padding: [25, 25, 25, 25],
+		// 	nearest: false
+		// });
 
 		this.setScene(this.viewer.scene);
 	}
@@ -400,6 +406,7 @@ export class MapView{
 		return this.extentsLayer;
 	}
 
+
 	getAnnotationsLayer () {
 		if (this.annotationsLayer) {
 			return this.annotationsLayer;
@@ -441,7 +448,8 @@ export class MapView{
 					color: '#0000ff',
 					width: 2
 				})
-			})
+			}),
+			zIndex:30,
 		});
 
 		return this.cameraLayer;
@@ -490,6 +498,7 @@ export class MapView{
 		let layer = new ol.layer.Vector({
 			source: new ol.source.Vector({}),
 			style: style,
+			zIndex:10,
 		});
 
 		this.images360Layer = layer;
@@ -512,11 +521,13 @@ export class MapView{
 					color: 'rgba(0, 0, 150, 1)',
 					width: 1
 				})
-			})
+			}),
+			zIndex:20,
 		});
 
 		return this.sourcesLayer;
 	}
+
 
 	getSourcesLabelLayer () {
 		if (this.sourcesLabelLayer) {
@@ -553,7 +564,7 @@ export class MapView{
 
 	getMapExtent () {
 		let bb = this.viewer.getBoundingBox();
-
+        console.log("this is the bb ",bb);
 		let bottomLeft = this.toMap.forward([bb.min.x, bb.min.y]);
 		let bottomRight = this.toMap.forward([bb.max.x, bb.min.y]);
 		let topRight = this.toMap.forward([bb.max.x, bb.max.y]);
@@ -570,6 +581,7 @@ export class MapView{
 			topRight: topRight,
 			topLeft: topLeft
 		};
+		console.log("this is the extend ",extent);
 		return extent;
 	};
 
@@ -626,20 +638,23 @@ export class MapView{
 	addImages360(images){
 		let transform = this.toMap.forward;
 		let layer = this.getImages360Layer();
+        let i=0;
+		for(let i=0;i<images.images.length;i++){
 
-		for(let image of images.images){
-
-			let p = transform([image.position[0], image.position[1]]);
+			let p = transform([images.images[i].position[0], images.images[i].position[1]]);
              //console.log("This is image ",image.position[0], image.position[1], "this is p", p);
 			let feature = new ol.Feature({
 				'geometry': new ol.geom.Point(p),
 			});
 
 			feature.onClick = () => {
-				images.focus(image);
+				images.focus(images.images[i]);
+				var evt = new CustomEvent("MyEventType", {detail: i});
+				window.dispatchEvent(evt);
 			};
 
 			layer.getSource().addFeature(feature);
+				
 		}
 	}
 
@@ -683,9 +698,13 @@ export class MapView{
 			mapExtent.topLeft,
 			mapExtent.bottomLeft
 		]);
-		view.fit(this.gExtent, [300, 300], {
+		
+		// Apply dynamic padding
+		if(!this.viewer.isUnityView()){
+		view.fit(this.gExtent, [300,300],{ // Top, Right, Bottom, Left
 			constrainResolution: false
 		});
+	}
 
 		if (pointcloud.pcoGeometry.type == 'ept'){ 
 			return;
@@ -761,8 +780,106 @@ export class MapView{
 			this.elMap.css('display', 'block');
 			this.enabled = true;
 		}
+		
 	}
+	
+   changeMiniMapPosition(top,left,size,url){
+	if(this.calledOnce==true)
+		return;
+ console.log("this is called how many tiems ");
+	this.elMap.css('top', `${top}px`);
+	this.elMap.css('left', `${left}px`);
+	this.elMap.css('width', `${size}px`);
+	this.elMap.css('height', `${size}px`);
+	this.elMap.css('display', 'block');
+	this.enabled=true;
+	let view= this.map.getView();
+		// Apply dynamic padding
+		view.fit(this.gExtent, [170,170],{ // Top, Right, Bottom, Left
+			constrainResolution: false
+		});
+		let mapExtent = this.getMapExtent();
+// 		console.log("this is the mapExtend ",mapExtent);
+// 		let mapWidth = mapExtent.topRight[0] - mapExtent.topLeft[0];
+// let mapHeight = mapExtent.topLeft[1] - mapExtent.bottomLeft[1];
+// 		let extentsLayer = this.getExtentsLayer();
+// 		if (extentsLayer) {
+// 			console.log("We are inside extends layer ");
+// 			let source = extentsLayer.getSource();
+// 			if (source) {
+// 				console.log("We are inside source layer ");
+// 				let features = source.getFeatures();
+// 				if (features.length > 0) {
+// 					console.log("We are inside feature layer ");
+// 					let geometry = features[0].getGeometry();
+// 					if (geometry && geometry instanceof ol.geom.LineString) {
+// 						console.log("We are inside geometry layer ");
+// 						geometry.setCoordinates([
+// 							mapExtent.bottomLeft,
+// 							mapExtent.bottomRight,
+// 							mapExtent.topRight,
+// 							mapExtent.topLeft,
+// 							mapExtent.bottomLeft,
+// 						]);
+// 					}
+// 				}
+// 			}
+// 		}
 
+// 		this.map
+// 		.getView()
+// 		.fit(extentsLayer.getSource().getExtent(), {
+// 		  size: [mapWidth,mapHeight],
+// 		  padding: [25, 25, 25, 25],
+// 		  nearest: false,
+// 		});
+
+    let imageExtent = [
+        mapExtent.bottomLeft[0], mapExtent.bottomLeft[1],
+        mapExtent.topRight[0], mapExtent.topRight[1]
+    ];
+	let imageUrl = url; // Replace with your image URL
+	let img = new Image();
+	img.crossOrigin = "anonymous";
+	img.src = imageUrl;
+	img.onload = () => {
+		let canvas = document.createElement('canvas');
+		let ctx = canvas.getContext('2d');
+	
+		// Set canvas size to match the rotated image dimensions
+		canvas.width = img.height;
+		canvas.height = img.width;
+	
+		// Rotate the image by 90 degrees
+		ctx.translate(canvas.width / 2, canvas.height / 2);
+		ctx.rotate(Math.PI / 2);
+		ctx.drawImage(img, -img.width / 2, -img.height / 2);
+	
+		// Create a new image source from the rotated canvas
+		let rotatedImageUrl = canvas.toDataURL();
+	
+		// Add a static image layer with the rotated image
+		let staticImageLayer = new ol.layer.Image({
+			source: new ol.source.ImageStatic({
+				url: rotatedImageUrl,
+				imageExtent: imageExtent,
+			}),
+			zIndex: 0 
+		});
+	
+		// Remove existing image layer if any
+		if (this.staticImageLayer) {
+			this.map.removeLayer(this.staticImageLayer);
+		}
+	
+		// Add the new static image layer to the map
+		this.map.addLayer(staticImageLayer);
+		this.staticImageLayer = staticImageLayer;
+   }
+   //this.updateExtentsLayer();
+
+   this.calledOnce=true;
+}
 	update (delta) {
 		if (!this.sceneProjection) {
 			return;
@@ -776,7 +893,7 @@ export class MapView{
 
 		// resize
 		let mapSize = this.map.getSize();
-		let resized = (pm.width() !== mapSize[0] || pm.height() !== mapSize[1]);
+		let resized = ( mapSize &&  mapSize.length >= 2 &&( pm.width() !== mapSize[0] || pm.height() !== mapSize[1]));
 		if (resized) {
 			this.map.updateSize();
 		}
@@ -787,7 +904,7 @@ export class MapView{
 		let scale = this.map.getView().getResolution();
 		let campos = camera.position;
 		let camdir = camera.getWorldDirection(new THREE.Vector3());
-        camdir.negate();
+        //camdir.negate();
 		//console.log("this is the camdir ",camdir);
 		let sceneLookAt = camdir.clone().multiplyScalar(30 * scale).add(campos);
 		let geoPos = camera.position;

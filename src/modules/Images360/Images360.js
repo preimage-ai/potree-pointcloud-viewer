@@ -187,7 +187,8 @@ export class Images360 extends EventDispatcher{
 		);
 
 		this.focusedImage = image360;
-
+        
+		if(!this.viewer.isUnityView)
 		this.elUnfocus.style.display = "";
 	}
 

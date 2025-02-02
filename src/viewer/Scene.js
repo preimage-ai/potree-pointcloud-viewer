@@ -123,6 +123,7 @@ export class Scene extends EventDispatcher{
 
 	addPointCloud (pointcloud) {
 		this.pointclouds.push(pointcloud);
+		if(!this.view.isUnityView)
 		this.scenePointCloud.add(pointcloud);
 
 		this.dispatchEvent({
@@ -174,6 +175,7 @@ export class Scene extends EventDispatcher{
 
 	add360Images(images){
 		this.images360.push(images);
+		if(!this.view.isUnityView)
 		this.scene.add(images.node);
 
 		this.dispatchEvent({
