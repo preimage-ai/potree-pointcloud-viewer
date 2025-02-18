@@ -2938,11 +2938,34 @@ export class Viewer extends EventDispatcher{
 		this.unityView=isUnityView;
 	}
 
-	miniMapPosition(top, botton, size,url){
-		this.miniMapTop=top;
-		this.miniMapBottom=botton;
-		this.miniMapSize=size;
-		this.mapView.changeMiniMapPosition(top, botton, size,url);
+	waitForMapView(timeout = 6000) {
+		return new Promise((resolve, reject) => {
+			const start = Date.now();
+			
+			const check = () => {
+				if (this.mapView) {
+					resolve();
+				} else if (Date.now() - start > timeout) {
+					reject(new Error('Timeout waiting for mapView'));
+				} else {
+					setTimeout(check, 100);
+				}
+			};
+			check();
+		});
+	}
+	
+	async miniMapPosition(top, bottom, size, url, center, width, height) {
+		try {
+			await this.waitForMapView();
+			this.miniMapTop = top;
+			this.miniMapBottom = bottom;
+			this.miniMapSize = size;
+			this.mapView.changeMiniMapPosition(top, bottom, size, url, center, width, height);
+		} catch (error) {
+			console.error('Failed to set mini map position:', error);
+			// Handle error appropriately
+		}
 	}
     isUnityView(){
 		return this.unityView;

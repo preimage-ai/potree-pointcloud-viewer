@@ -45,6 +45,7 @@ export class MapView{
 		this.images360Layer = null;
 		this.enabled = false;
 		this.calledOnce = false;
+		let downloadControls=null;
 
 		this.createAnnotationStyle = (text) => {
 			return [
@@ -197,7 +198,7 @@ export class MapView{
 			});
 		};
 		ol.inherits(DownloadSelectionControl, ol.control.Control);
-
+		this.downloadControls=new DownloadSelectionControl(),
 		this.map = new ol.Map({
 			controls: ol.control.defaults({
 				attributionOptions: ({
@@ -205,17 +206,17 @@ export class MapView{
 				})
 			}).extend([
 				// this.controls.zoomToExtent,
-				new DownloadSelectionControl(),
+				this.downloadControls,
 				mousePositionControl
 			]),
 			layers: [
 				new ol.layer.Tile({source: new ol.source.OSM()}),
 				this.toolLayer,
 				this.annotationsLayer,
-				//this.sourcesLayer,
-				//this.sourcesLabelLayer,
+				this.sourcesLayer,
+				this.sourcesLabelLayer,
 				this.images360Layer,
-				//extentsLayer,
+				extentsLayer,
 				cameraLayer
 			],
 			target: 'potree_map_content',
@@ -224,6 +225,7 @@ export class MapView{
 				zoom: 9,
 			})
 		});
+
 		// DRAGBOX / SELECTION
 		this.dragBoxLayer = new ol.layer.Vector({
 			source: new ol.source.Vector({}),
@@ -449,7 +451,7 @@ export class MapView{
 					width: 2
 				})
 			}),
-			zIndex:30,
+			zIndex:40,
 		});
 
 		return this.cameraLayer;
@@ -498,7 +500,7 @@ export class MapView{
 		let layer = new ol.layer.Vector({
 			source: new ol.source.Vector({}),
 			style: style,
-			zIndex:10,
+			zIndex:30,
 		});
 
 		this.images360Layer = layer;
@@ -564,7 +566,7 @@ export class MapView{
 
 	getMapExtent () {
 		let bb = this.viewer.getBoundingBox();
-        console.log("this is the bb ",bb);
+        //console.log("this is the bb ",bb);
 		let bottomLeft = this.toMap.forward([bb.min.x, bb.min.y]);
 		let bottomRight = this.toMap.forward([bb.max.x, bb.min.y]);
 		let topRight = this.toMap.forward([bb.max.x, bb.max.y]);
@@ -581,7 +583,7 @@ export class MapView{
 			topRight: topRight,
 			topLeft: topLeft
 		};
-		console.log("this is the extend ",extent);
+		//console.log("this is the extend ",extent);
 		return extent;
 	};
 
@@ -649,7 +651,7 @@ export class MapView{
 
 			feature.onClick = () => {
 				images.focus(images.images[i]);
-				var evt = new CustomEvent("MyEventType", {detail: i});
+				var evt = new CustomEvent("piHotSpotClickMiniMapEvent", {detail: i});
 				window.dispatchEvent(evt);
 			};
 
@@ -782,23 +784,81 @@ export class MapView{
 		}
 		
 	}
+
+	getImageExtends(center, width ,height){
+		let halfWidth = width / 2;
+		let halfHeight = height / 2;
+	//    console.log("This is the center ", center ,{
+	// 	x: center.x - halfWidth,
+	// 	y: center.y - halfHeight
+	// } ,{
+	// 	x: center.x + halfWidth,
+	// 	y: center.y + halfHeight
+	// })
+		let min = {
+			x: center.x - halfWidth,
+			y: center.y - halfHeight
+		};
 	
-   changeMiniMapPosition(top,left,size,url){
-	if(this.calledOnce==true)
-		return;
- console.log("this is called how many tiems ");
-	this.elMap.css('top', `${top}px`);
-	this.elMap.css('left', `${left}px`);
+		let max = {
+			x: center.x + halfWidth,
+			y: center.y + halfHeight
+		}; 
+
+		let bottomLeft=this.toMap.forward([min.x,min.y]);
+		let bottomRight= this.toMap.forward([max.x,min.y]);
+		let topRight=this.toMap.forward([max.x,max.y]);
+        let topLeft= this.toMap.forward([min.x,max.y]) 
+
+        let extent = {
+			bottomLeft: bottomLeft,
+			bottomRight: bottomRight,
+			topRight: topRight,
+			topLeft: topLeft
+		};
+		return extent;
+	}
+
+		// ...existing code...
+		removeDownloadSelectionControl() {
+			this.map.removeControl(this.downloadControls);
+		}
+
+   changeMiniMapPosition(top,left,size,url,center,width,height){
+
+    //console.log("this is called how many tiems ");
+	this.elMap.css('top', `${top / 2}vh`);
+	this.elMap.css('left', `${left / 2}vw`);
 	this.elMap.css('width', `${size}px`);
 	this.elMap.css('height', `${size}px`);
+	let elMapHeader=$('#potree_map_header');
+	elMapHeader.css("background-color","#fffe");
+	elMapHeader.css("width","60%");
+	elMapHeader.css("height","8px");
+	elMapHeader.css("left","50%");
+	elMapHeader.css("transform","translateX(-50%)");
+	elMapHeader.css("border-radius","4px");
+	elMapHeader.css("top","10px");
+	if(this.calledOnce==true)
+		return;
 	this.elMap.css('display', 'block');
 	this.enabled=true;
 	let view= this.map.getView();
+	let extendsSize=300
+	if(size<=150){
+extendsSize=100;
+	}
+	else if(size<=200){
+	extendsSize=150;
+	}
+	else if(size==300){
+		extendsSize=300;
+	}
 		// Apply dynamic padding
-		view.fit(this.gExtent, [170,170],{ // Top, Right, Bottom, Left
+		view.fit(this.gExtent, [extendsSize,extendsSize],{ // Top, Right, Bottom, Left
 			constrainResolution: false
 		});
-		let mapExtent = this.getMapExtent();
+		let imageExtents = this.getImageExtends(center,width,height);
 // 		console.log("this is the mapExtend ",mapExtent);
 // 		let mapWidth = mapExtent.topRight[0] - mapExtent.topLeft[0];
 // let mapHeight = mapExtent.topLeft[1] - mapExtent.bottomLeft[1];
@@ -835,33 +895,15 @@ export class MapView{
 // 		});
 
     let imageExtent = [
-        mapExtent.bottomLeft[0], mapExtent.bottomLeft[1],
-        mapExtent.topRight[0], mapExtent.topRight[1]
+        imageExtents.bottomLeft[0], imageExtents.bottomLeft[1],
+        imageExtents.topRight[0], imageExtents.topRight[1]
     ];
-	let imageUrl = url; // Replace with your image URL
-	let img = new Image();
-	img.crossOrigin = "anonymous";
-	img.src = imageUrl;
-	img.onload = () => {
-		let canvas = document.createElement('canvas');
-		let ctx = canvas.getContext('2d');
-	
-		// Set canvas size to match the rotated image dimensions
-		canvas.width = img.height;
-		canvas.height = img.width;
-	
-		// Rotate the image by 90 degrees
-		ctx.translate(canvas.width / 2, canvas.height / 2);
-		ctx.rotate(Math.PI / 2);
-		ctx.drawImage(img, -img.width / 2, -img.height / 2);
-	
-		// Create a new image source from the rotated canvas
-		let rotatedImageUrl = canvas.toDataURL();
+	let imageUrl = url;
 	
 		// Add a static image layer with the rotated image
 		let staticImageLayer = new ol.layer.Image({
 			source: new ol.source.ImageStatic({
-				url: rotatedImageUrl,
+				url: imageUrl,
 				imageExtent: imageExtent,
 			}),
 			zIndex: 0 
@@ -875,8 +917,18 @@ export class MapView{
 		// Add the new static image layer to the map
 		this.map.addLayer(staticImageLayer);
 		this.staticImageLayer = staticImageLayer;
-   }
    //this.updateExtentsLayer();
+
+   
+		if(this.map && this.viewer.isUnityView()){
+			//console.log("We are trying to remove this");
+               this.map.removeLayer(this.extentsLayer);
+			   this.map.removeLayer(this.sourcesLabelLayer);
+			   this.map.removeLayer(this.sourcesLayer);
+			   if(size<=200){
+this.removeDownloadSelectionControl();
+			   }
+		}
 
    this.calledOnce=true;
 }
