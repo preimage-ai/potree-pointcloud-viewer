@@ -440,7 +440,11 @@ export class OctreeLoader{
 	static async load(url, remainingPaths){
 
 		try {
-			let response = await fetch(url);
+			let response = await fetch(url,
+				{
+					credentials: "include"
+				}
+			);
 		let metadata = await response.json();
 		let attributes = OctreeLoader.parseAttributes(metadata.attributes);
 
