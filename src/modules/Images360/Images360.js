@@ -315,7 +315,11 @@ export class Images360Loader{
 				forward: a => a,
 			};
 		}
-		let response = await fetch(url);
+		let response = await fetch(url,
+			{
+				credentials: "include"
+			}
+		);
 		let text = await response.text();
 
 		let lines = text.split(/\r?\n/);
