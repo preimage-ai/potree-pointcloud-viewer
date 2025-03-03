@@ -327,7 +327,6 @@ export class MapView{
 				this.elTooltip.css('display', '');
 				this.elTooltip.css('left', `${p[0]}px`);
 				this.elTooltip.css('top', `${p[1]}px`);
-				//console.log("I am hovering over you");
 			};
 
 			feature.onClick = evt => {
@@ -559,7 +558,6 @@ export class MapView{
 		this.sceneProjection = sceneProjection;
 		this.toMap = proj4(this.sceneProjection, this.mapProjection);
 		this.toScene = proj4(this.mapProjection, this.sceneProjection);
-		//console.log("scene projection", this.sceneProjection, " this is map projection ",this.mapProjection,"this scene", this.toScene, "this map", this.toMap);
 		// this.toMap = proj4(this.sceneProjection, this.sceneProjection);
 		// this.toScene = proj4(this.sceneProjection, this.sceneProjection);
 	};
@@ -972,7 +970,6 @@ this.removeDownloadSelectionControl();
 		let p1 = mapPos.toArray();
 		let p2 = mapLookAt.clone().sub(mapSide.clone().multiplyScalar(0.3 * mapLength)).toArray();
 		let p3 = mapLookAt.clone().add(mapSide.clone().multiplyScalar(0.3 * mapLength)).toArray();
-		//console.log("This is the ",p1," p2",p2 ,"p3 ",p3);
 
 		this.gCamera.setCoordinates([p1, p2, p3, p1]);
 	}
