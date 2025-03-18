@@ -124,11 +124,25 @@ if (document.currentScript && document.currentScript.src) {
 }
 
 let resourcePath = scriptPath + '/resources';
+console.log("resourcePath", resourcePath);
 
 // scriptPath: build/potree
 // resourcePath:build/potree/resources
 export {scriptPath, resourcePath};
 
+const disposePointCloud = (pointcloud) => {
+	if (!pointcloud) {
+		return;
+	}
+	pointcloud.dispose();
+}
+
+export const cleanupPotree = (pointcloud) => {
+	// Potree.workerPool.dispose(); Disable async requests
+	disposePointCloud(pointcloud);
+	Potree.lru.cleanAll();
+	Potree.numNodesLoading = 0;
+}
 
 export function loadPointCloud(path, remainingPaths = undefined, matrix = [], name, callback){
 	let loaded = function(e){
@@ -165,6 +179,8 @@ export function loadPointCloud(path, remainingPaths = undefined, matrix = [], na
 			});
 		} else if (path.indexOf('metadata.json') > 0) {
 			OctreeLoader.load(path, remainingPaths).then(e => {
+				console.log("e", e);
+				console.log("workerPool", Potree.workerPool)
 				let geometry = e.geometry;
 				if(!geometry){
 					console.error(new Error(`failed to load point cloud from URL: ${path}`));
