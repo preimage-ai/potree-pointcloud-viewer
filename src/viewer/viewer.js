@@ -2967,6 +2967,17 @@ export class Viewer extends EventDispatcher{
 			// Handle error appropriately
 		}
 	}
+
+	async setMiniMapImageInPotree(url, center, width, height) {
+		try{
+			await this.waitForMapView().then(() => {
+				this.mapView.setMiniMapImage(url, center, width, height);
+			})
+		}
+		catch(error){
+			console.error('Failed to set mini map image:', error);
+		}
+	}
     isUnityView(){
 		return this.unityView;
 	}
