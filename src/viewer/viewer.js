@@ -2968,10 +2968,10 @@ export class Viewer extends EventDispatcher{
 		}
 	}
 
-	async setMiniMapImageInPotree(url, center, width, height) {
+	async setMiniMapImageInPotree(url, center, width, height,isFloorPlanLayer=false) {
 		try{
 			await this.waitForMapView().then(() => {
-				this.mapView.setMiniMapImage(url, center, width, height);
+				this.mapView.setMiniMapImage(url, center, width, height,isFloorPlanLayer);
 			})
 		}
 		catch(error){

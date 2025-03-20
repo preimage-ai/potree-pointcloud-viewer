@@ -74,6 +74,7 @@ export class MapView {
     this.enabled = false;
     this.calledOnce = false;
     let downloadControls = null;
+    this.staticImageLayers = new Map();
 
     this.createAnnotationStyle = (text) => {
       return [
@@ -546,10 +547,10 @@ export class MapView {
 
     let style = new ol.style.Style({
       image: new ol.style.Circle({
-        radius: 4,
+        radius: 2.7,
         stroke: new ol.style.Stroke({
           color: [255, 0, 0, 1],
-          width: 2,
+          width: 1,
         }),
         fill: new ol.style.Fill({
           color: [255, 100, 100, 1],
@@ -697,26 +698,50 @@ export class MapView {
   addImages360(images) {
     let transform = this.toMap.forward;
     let layer = this.getImages360Layer();
-    let i = 0;
+    
+    // Create points and connect with lines
     for (let i = 0; i < images.images.length; i++) {
-      let p = transform([
-        images.images[i].position[0],
-        images.images[i].position[1],
-      ]);
-      //console.log("This is image ",image.position[0], image.position[1], "this is p", p);
-      let feature = new ol.Feature({
-        geometry: new ol.geom.Point(p),
-      });
+        let p = transform([
+            images.images[i].position[0],
+            images.images[i].position[1],
+        ]);
 
-      feature.onClick = () => {
-        images.focus(images.images[i]);
-        var evt = new CustomEvent("piHotSpotClickMiniMapEvent", { detail: i });
-        window.dispatchEvent(evt);
-      };
+        // Create point feature
+        let pointFeature = new ol.Feature({
+            geometry: new ol.geom.Point(p)
+        });
 
-      layer.getSource().addFeature(feature);
+        pointFeature.onClick = () => {
+            images.focus(images.images[i]);
+            var evt = new CustomEvent("piHotSpotClickMiniMapEvent", { detail: i });
+            window.dispatchEvent(evt);
+        };
+
+        layer.getSource().addFeature(pointFeature);
+
+        // Create line to next point if not last point
+        if (i < images.images.length - 1) {
+            let nextP = transform([
+                images.images[i + 1].position[0],
+                images.images[i + 1].position[1],
+            ]);
+
+            let lineFeature = new ol.Feature({
+                geometry: new ol.geom.LineString([p, nextP])
+            });
+
+            // Set line style
+            lineFeature.setStyle(new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: 'green',
+                    width: 2
+                })
+            }));
+
+            layer.getSource().addFeature(lineFeature);
+        }
     }
-  }
+}
 
   async load(pointcloud) {
     if (!pointcloud) {
@@ -882,69 +907,40 @@ export class MapView {
   removeDownloadSelectionControl() {
     this.map.removeControl(this.downloadControls);
   }
-  setMiniMapImage(url, center, width, height) {
+  setMiniMapImage(url, center, width, height, isFloorPlan=false) {
     let imageExtents = this.getImageExtends(center, width, height);
-    // 		console.log("this is the mapExtend ",mapExtent);
-    // 		let mapWidth = mapExtent.topRight[0] - mapExtent.topLeft[0];
-    // let mapHeight = mapExtent.topLeft[1] - mapExtent.bottomLeft[1];
-    // 		let extentsLayer = this.getExtentsLayer();
-    // 		if (extentsLayer) {
-    // 			console.log("We are inside extends layer ");
-    // 			let source = extentsLayer.getSource();
-    // 			if (source) {
-    // 				console.log("We are inside source layer ");
-    // 				let features = source.getFeatures();
-    // 				if (features.length > 0) {
-    // 					console.log("We are inside feature layer ");
-    // 					let geometry = features[0].getGeometry();
-    // 					if (geometry && geometry instanceof ol.geom.LineString) {
-    // 						console.log("We are inside geometry layer ");
-    // 						geometry.setCoordinates([
-    // 							mapExtent.bottomLeft,
-    // 							mapExtent.bottomRight,
-    // 							mapExtent.topRight,
-    // 							mapExtent.topLeft,
-    // 							mapExtent.bottomLeft,
-    // 						]);
-    // 					}
-    // 				}
-    // 			}
-    // 		}
-
-    // 		this.map
-    // 		.getView()
-    // 		.fit(extentsLayer.getSource().getExtent(), {
-    // 		  size: [mapWidth,mapHeight],
-    // 		  padding: [25, 25, 25, 25],
-    // 		  nearest: false,
-    // 		});
 
     let imageExtent = [
-      imageExtents.bottomLeft[0],
-      imageExtents.bottomLeft[1],
-      imageExtents.topRight[0],
-      imageExtents.topRight[1],
+        imageExtents.bottomLeft[0],
+        imageExtents.bottomLeft[1],
+        imageExtents.topRight[0],
+        imageExtents.topRight[1]
     ];
-    let imageUrl = url;
 
-    // Add a static image layer with the rotated image
-    let staticImageLayer = new ol.layer.Image({
-      source: new ol.source.ImageStatic({
-        url: imageUrl,
-        imageExtent: imageExtent,
-      }),
-      zIndex: 0,
-    });
-
-    // Remove existing image layer if any
-    if (this.staticImageLayer) {
-      this.map.removeLayer(this.staticImageLayer);
+    // Initialize storage for layers if not exists
+    if (!this.staticImageLayers) {
+        this.staticImageLayers = new Map(); // Using Map to store url-layer pairs
     }
 
-    // Add the new static image layer to the map
+    // Check if layer with this URL already exists
+    if (this.staticImageLayers.has(url)) {
+        console.log('Layer with this URL already exists');
+        return;
+    }
+
+    // Create new static image layer
+    let staticImageLayer = new ol.layer.Image({
+        source: new ol.source.ImageStatic({
+            url: url,
+            imageExtent: imageExtent,
+        }),
+        zIndex: isFloorPlan ? 10 : 0,
+    });
+
+    // Add the new layer to the map and store it
     this.map.addLayer(staticImageLayer);
-    this.staticImageLayer = staticImageLayer;
-  }
+    this.staticImageLayers.set(url, staticImageLayer);
+}
 
   changeMiniMapPosition(top, left, size, url, center, width, height) {
     //console.log("this is called how many tiems ");
