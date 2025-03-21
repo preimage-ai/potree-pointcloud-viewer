@@ -2957,11 +2957,12 @@ export class Viewer extends EventDispatcher{
 	
 	async miniMapPosition(top, bottom, size, url, center, width, height) {
 		try {
-			await this.waitForMapView();
-			this.miniMapTop = top;
-			this.miniMapBottom = bottom;
-			this.miniMapSize = size;
-			this.mapView.changeMiniMapPosition(top, bottom, size, url, center, width, height);
+			await this.waitForMapView().then(() => {			
+				this.miniMapTop = top;
+				this.miniMapBottom = bottom;
+				this.miniMapSize = size;
+				this.mapView.changeMiniMapPosition(top, bottom, size, url, center, width, height);
+			});
 		} catch (error) {
 			console.error('Failed to set mini map position:', error);
 			// Handle error appropriately
