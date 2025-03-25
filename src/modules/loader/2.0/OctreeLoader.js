@@ -51,6 +51,7 @@ export class NodeLoader{
 						'content-type': 'multipart/byteranges',
 						'Range': `bytes=${first}-${last}`,
 					},
+					credentials: 'include',
 				});
 
 				buffer = await response.arrayBuffer();
@@ -301,6 +302,7 @@ export class NodeLoader{
 				'content-type': 'multipart/byteranges',
 				'Range': `bytes=${first}-${last}`,
 			},
+			credentials: 'include',
 		});
 
 
@@ -440,7 +442,11 @@ export class OctreeLoader{
 	static async load(url, remainingPaths){
 
 		try {
-			let response = await fetch(url);
+			let response = await fetch(url,
+				{
+					credentials: "include"
+				}
+			);
 		let metadata = await response.json();
 		let attributes = OctreeLoader.parseAttributes(metadata.attributes);
 
