@@ -385,7 +385,11 @@ export class Images360Loader{
 			};
 		}
 		
-		let response = await fetch(`${url}/coordinates.txt`);
+		let response = await fetch(`${url}/coordinates.txt`,
+			{
+				credentials: 'include',
+			}
+		);
 		let text = await response.text();
 
 		let lines = text.split(/\r?\n/);
