@@ -310,14 +310,18 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, imageUrls, params = {}, matrix = []){
+	static async load(url, viewer, s3Path, params = {}, matrix = []){
 		
 		if(!params.transform){
 			params.transform = {
 				forward: a => a,
 			};
 		}
-		let response = await fetch(url);
+		let response = await fetch(url,
+			{
+				credentials: "include"
+			}
+		);
 		let text = await response.text();
 
 		let lines = text.split(/\r?\n/);
@@ -342,10 +346,8 @@ export class Images360Loader{
 			course = parseFloat(course);
 			pitch = parseFloat(pitch);
 			roll = parseFloat(roll);
-
 			filename = filename.replace(/"/g, "");
-			filename = filename.split("/").pop();
-			let file = imageUrls[filename];
+			let file = s3Path + filename;
 
 			let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
 
@@ -383,7 +385,11 @@ export class Images360Loader{
 			};
 		}
 		
-		let response = await fetch(`${url}/coordinates.txt`);
+		let response = await fetch(`${url}/coordinates.txt`,
+			{
+				credentials: 'include',
+			}
+		);
 		let text = await response.text();
 
 		let lines = text.split(/\r?\n/);
