@@ -699,47 +699,133 @@ export class MapView {
     let transform = this.toMap.forward;
     let layer = this.getImages360Layer();
     
-    // Create points and connect with lines
-    for (let i = 0; i < images.images.length; i++) {
-        let p = transform([
-            images.images[i].position[0],
-            images.images[i].position[1],
-        ]);
+    const heightThreshold = 1.2;
+    const proximityThreshold = 9;
+    
+    // Helper function to get prefix and numeric value
+    const parseImagePath = (path) => {
+        const match = path.match(/(\d+)_(\d+)_(\d+)/);
+        if (match) {
+            return {
+                prefix: `${match[1]}_${match[2]}`,
+                number: parseInt(match[3])
+            };
+        }
+        return null;
+    };
 
+    // Sort images by prefix and number
+    images.images.sort((a, b) => {
+        const pathA = parseImagePath(a.file);
+        const pathB = parseImagePath(b.file);
+
+        if (pathA && pathB) {
+            // First compare prefixes
+            if (pathA.prefix !== pathB.prefix) {
+                return pathA.prefix.localeCompare(pathB.prefix);
+            }
+            // If prefixes are same, compare numbers
+            return pathA.number - pathB.number;
+        }
+        return 0;
+    });
+
+    // Create features with lines connecting sequential points in same prefix group
+    let currentPrefix = null;
+    let lastPoint = null;
+    let lastImage = null;
+    let groupColor = null;
+
+    for (let i = 0; i < images.images.length; i++) {
+        let currentImage = images.images[i];
+        let parsedPath = parseImagePath(currentImage.file);
+        let currentPos = currentImage.position;
+        
         // Create point feature
+        let p = transform([currentPos[0], currentPos[1]]);
         let pointFeature = new ol.Feature({
             geometry: new ol.geom.Point(p)
         });
 
+        // Add click handler
         pointFeature.onClick = () => {
-            images.focus(images.images[i]);
+            images.focus(currentImage);
             var evt = new CustomEvent("piHotSpotClickMiniMapEvent", { detail: i });
             window.dispatchEvent(evt);
         };
-
+        
         layer.getSource().addFeature(pointFeature);
 
-        // Create line to next point if not last point
-        if (i < images.images.length - 1) {
-            let nextP = transform([
-                images.images[i + 1].position[0],
-                images.images[i + 1].position[1],
-            ]);
+        // Handle line creation between points of same prefix
+        if (parsedPath) {
+            if (currentPrefix !== parsedPath.prefix) {
+                // Start new group
+                currentPrefix = parsedPath.prefix;
+                lastPoint = p;
+                lastImage = currentImage;
+                // Generate new random color for this group
+                groupColor = 'green';
+                continue;
+            }
 
-            let lineFeature = new ol.Feature({
-                geometry: new ol.geom.LineString([p, nextP])
-            });
+            // Check height and proximity within same prefix group
+            if (lastImage && lastPoint) {
+                let heightDiff = Math.abs(currentPos[2] - lastImage.position[2]);
+                let horizontalDist = Math.sqrt(
+                    Math.pow(currentPos[0] - lastImage.position[0], 2) +
+                    Math.pow(currentPos[1] - lastImage.position[1], 2)
+                );
 
-            // Set line style
-            lineFeature.setStyle(new ol.style.Style({
-                stroke: new ol.style.Stroke({
-                    color: 'green',
-                    width: 2
-                })
-            }));
+                // Only connect points if they meet both criteria
+                if (heightDiff <= heightThreshold && horizontalDist <= proximityThreshold) {
+                    let lineFeature = new ol.Feature({
+                        geometry: new ol.geom.LineString([lastPoint, p])
+                    });
 
-            layer.getSource().addFeature(lineFeature);
+                    lineFeature.setStyle(new ol.style.Style({
+                        stroke: new ol.style.Stroke({
+                            color: groupColor,
+                            width: 2
+                        })
+                    }));
+
+                    layer.getSource().addFeature(lineFeature);
+                }
+            }
+            
+            lastPoint = p;
+            lastImage = currentImage;
         }
+    }
+}
+
+// Helper method to create line features for a group
+createLineFeatures(group, transform, layer) {
+    for (let i = 0; i < group.length - 1; i++) {
+        let p1 = transform([
+            group[i].position[0],
+            group[i].position[1]
+        ]);
+        
+        let p2 = transform([
+            group[i + 1].position[0],
+            group[i + 1].position[1]
+        ]);
+
+        let lineFeature = new ol.Feature({
+            geometry: new ol.geom.LineString([p1, p2])
+        });
+
+        // Create a random color for this group
+        // Set line style
+        lineFeature.setStyle(new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: "green",
+                width: 2
+            })
+        }));
+
+        layer.getSource().addFeature(lineFeature);
     }
 }
 
