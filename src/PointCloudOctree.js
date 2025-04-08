@@ -1234,7 +1234,6 @@ export class PointCloudOctree extends PointCloudTree {
 			this.visibleGeometry = null;
 		}
 		if (this.parent){
-			console.log("parent", this.parent);
 			this.parent.remove(this);
 		}
 		this.visibleNodes = null;
