@@ -22,6 +22,14 @@ export class WorkerPool{
 	returnWorker(url, worker){
 		this.workers[url].push(worker);
 	}
+
+	dispose() {
+		for (let url in this.workers){
+			for (let worker of this.workers[url]){
+				worker.terminate();
+			}
+		}
+	}
 };
 
 //Potree.workerPool = new Potree.WorkerPool();

@@ -70,9 +70,13 @@
                 [0, 0, 1, 0],
                 [0, 0, 0, 1]
               ];
+			  let el;
 		Potree.loadPointCloud(url, otherPath, matrix, "ptcld", e => {
+			console.log("eee", e);
+			console.log("potree", Potree);
 			let scene = viewer.scene;
-			let pointcloud = e.pointcloud;
+			let pointcloud = e.pointcloud;	
+			el=pointcloud;	
 			console.log("scene", viewer.scene);
 
 						// const mat = new THREE.Matrix4();
@@ -94,6 +98,8 @@
 			viewer.setExternalMeasureScale(3);
 			scene.addPointCloud(pointcloud);
 			viewer.fitToScreen();
+			console.log("lru inside", Potree.lru);
+			console.log("renderer", viewer.renderer)
 			
 		});
 		// const ifcLoader = new IFCLoader();
@@ -110,7 +116,11 @@
 		// 										.then(mesh => {
 		// 											console.log("loaded mesh", mesh);
 		// 										});
-		
+		setTimeout(function(){
+			console.log("dispose");
+			viewer.renderer.dispose();
+			Potree.cleanupPotree(el);
+		}, 5000);
 	</script>
 	
   </body>

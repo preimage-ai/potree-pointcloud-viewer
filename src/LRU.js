@@ -169,6 +169,17 @@ class LRU{
 		}
 	}
 
+	cleanAll() {
+		// this.disposeDescendants(this.first.node);
+		// this.disposeDescendants(this.last.node);
+		for (let key in this.items) {
+			let node = this.items[key].node;
+			this.disposeDescendants(node);
+		}
+		this.numPoints = 0;
+		this.elements = 0;
+	}
+
 }
 
 export {LRU, LRUItem};
