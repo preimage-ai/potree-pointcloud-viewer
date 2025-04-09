@@ -163,6 +163,8 @@ export class Images360 extends EventDispatcher{
 
 		{ // orientation
 			let {rot_x, rot_y, rot_z} = image360;
+			console.log("rot_x", rot_x, rot_y, rot_z);
+			console.log("name", image360.file);
 			this.sphere.rotation.set(
 				THREE.Math.degToRad(90),
 				THREE.Math.degToRad(-90),
@@ -329,16 +331,12 @@ export class Images360Loader{
 
 		let images360 = new Images360(viewer);
 
-		for(let line of coordinateLines){
-			
-			if(line.trim().length === 0){
-				continue;
-			}
-
+		for (let line of coordinateLines) {
+			if (line.trim().length === 0) continue;
+		 
 			let tokens = line.split(/\t/);
-			
 			let [filename, time, long, lat, alt, course, pitch, roll] = tokens;
-			
+		 
 			time = parseFloat(time);
 			long = parseFloat(long);
 			lat = parseFloat(lat);
@@ -348,12 +346,52 @@ export class Images360Loader{
 			roll = parseFloat(roll);
 			filename = filename.replace(/"/g, "");
 			let file = s3Path + filename;
-
+		 
 			let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
-
+		 
+			// Original position (in world/projected space)
 			let xy = params.transform.forward([long, lat]);
-			let position = [...xy, alt];
-			image360.position = position;
+			let originalPosition = new THREE.Vector3(xy[0], xy[1], alt);
+			THREE.Quaternion.prototype.toAxisAngle = function (outAxis) {
+				if (this.w > 1) this.normalize();
+				const angle = 2 * Math.acos(this.w);
+				const s = Math.sqrt(1 - this.w * this.w);
+				if (s < 0.001) {
+				  outAxis.set(1, 0, 0); // default axis
+				} else {
+				  outAxis.set(this.x / s, this.y / s, this.z / s);
+				}
+				return angle;
+			  };
+			// Transform the position
+			const mat = new THREE.Matrix4();
+			mat.set(
+				matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+				matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+				matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+				matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+			);
+			originalPosition.applyMatrix4(mat);
+			image360.position = [originalPosition.x, originalPosition.y, originalPosition.z];
+			const rot_x	= image360.rot_x;
+			const rot_y	= image360.rot_y;
+			const rot_z	= image360.rot_z;
+			let axis = new THREE.Vector3(rot_x, rot_y, rot_z).normalize();
+			let angle = Math.sqrt(rot_x*rot_x + rot_y*rot_y + rot_z*rot_z);
+			// Convert Euler angles (degrees) to a rotation matrix
+			let rotationMatrix = new THREE.Matrix4().makeRotationAxis(axis, angle);
+			// Apply transformation to rotation
+			rotationMatrix.premultiply(mat); // or postMultiply depending on your convention
+			let quat = new THREE.Quaternion().setFromRotationMatrix(rotationMatrix);
+			quat.toAxisAngle(axis);
+			const resultAxis = new THREE.Vector3();
+			let resultAngle = quat.angleTo(new THREE.Quaternion()); // relative to identity
+ 
+			quat.normalize();
+			quat.toAxisAngle(resultAxis);
+			image360.rot_x = resultAxis.x * resultAngle
+			image360.rot_y = resultAxis.y * resultAngle
+			image360.rot_z = resultAxis.z * resultAngle
 
 			images360.images.push(image360);
 		}
