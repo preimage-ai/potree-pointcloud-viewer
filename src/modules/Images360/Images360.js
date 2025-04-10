@@ -1,4 +1,3 @@
-
 import * as THREE from "../../../libs/three.js/build/three.module.js";
 import { EventDispatcher } from "../../EventDispatcher.js";
 import {TextSprite} from "../../TextSprite.js";
@@ -352,17 +351,6 @@ export class Images360Loader{
 			// Original position (in world/projected space)
 			let xy = params.transform.forward([long, lat]);
 			let originalPosition = new THREE.Vector3(xy[0], xy[1], alt);
-			THREE.Quaternion.prototype.toAxisAngle = function (outAxis) {
-				if (this.w > 1) this.normalize();
-				const angle = 2 * Math.acos(this.w);
-				const s = Math.sqrt(1 - this.w * this.w);
-				if (s < 0.001) {
-				  outAxis.set(1, 0, 0); // default axis
-				} else {
-				  outAxis.set(this.x / s, this.y / s, this.z / s);
-				}
-				return angle;
-			  };
 			// Transform the position
 			const mat = new THREE.Matrix4();
 			mat.set(
@@ -373,26 +361,6 @@ export class Images360Loader{
 			);
 			originalPosition.applyMatrix4(mat);
 			image360.position = [originalPosition.x, originalPosition.y, originalPosition.z];
-			const rot_x	= image360.rot_x;
-			const rot_y	= image360.rot_y;
-			const rot_z	= image360.rot_z;
-			let axis = new THREE.Vector3(rot_x, rot_y, rot_z).normalize();
-			let angle = Math.sqrt(rot_x*rot_x + rot_y*rot_y + rot_z*rot_z);
-			// Convert Euler angles (degrees) to a rotation matrix
-			let rotationMatrix = new THREE.Matrix4().makeRotationAxis(axis, angle);
-			// Apply transformation to rotation
-			rotationMatrix.premultiply(mat); // or postMultiply depending on your convention
-			let quat = new THREE.Quaternion().setFromRotationMatrix(rotationMatrix);
-			quat.toAxisAngle(axis);
-			const resultAxis = new THREE.Vector3();
-			let resultAngle = quat.angleTo(new THREE.Quaternion()); // relative to identity
- 
-			quat.normalize();
-			quat.toAxisAngle(resultAxis);
-			image360.rot_x = resultAxis.x * resultAngle
-			image360.rot_y = resultAxis.y * resultAngle
-			image360.rot_z = resultAxis.z * resultAngle
-
 			images360.images.push(image360);
 		}
 
@@ -515,5 +483,3 @@ export class Images360Loader{
 	
 
 };
-
-
