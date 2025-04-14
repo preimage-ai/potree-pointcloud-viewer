@@ -714,40 +714,18 @@ export class MapView {
         return null;
     };
 
-    // Sort images by prefix and number
-    images.images.sort((a, b) => {
-        const pathA = parseImagePath(a.file);
-        const pathB = parseImagePath(b.file);
-
-        if (pathA && pathB) {
-            // First compare prefixes
-            if (pathA.prefix !== pathB.prefix) {
-                return pathA.prefix.localeCompare(pathB.prefix);
-            }
-            // If prefixes are same, compare numbers
-            return pathA.number - pathB.number;
-        }
-        return 0;
-    });
-
-    // Create features with lines connecting sequential points in same prefix group
-    let currentPrefix = null;
-    let lastPoint = null;
-    let lastImage = null;
-    let groupColor = null;
-
+    // First create all point features with correct indices
+    let points = [];
     for (let i = 0; i < images.images.length; i++) {
         let currentImage = images.images[i];
-        let parsedPath = parseImagePath(currentImage.file);
         let currentPos = currentImage.position;
         
-        // Create point feature
         let p = transform([currentPos[0], currentPos[1]]);
         let pointFeature = new ol.Feature({
             geometry: new ol.geom.Point(p)
         });
 
-        // Add click handler
+        // Add click handler with original index
         pointFeature.onClick = () => {
             images.focus(currentImage);
             var evt = new CustomEvent("piHotSpotClickMiniMapEvent", { detail: i });
@@ -755,31 +733,61 @@ export class MapView {
         };
         
         layer.getSource().addFeature(pointFeature);
+        
+        // Store point info for line creation
+        points.push({
+            feature: pointFeature,
+            image: currentImage,
+            position: p,
+            path: currentImage.file
+        });
+    }
 
-        // Handle line creation between points of same prefix
+    // Now sort points by prefix for line creation
+    points.sort((a, b) => {
+        const pathA = parseImagePath(a.path);
+        const pathB = parseImagePath(b.path);
+
+        if (pathA && pathB) {
+            if (pathA.prefix !== pathB.prefix) {
+                return pathA.prefix.localeCompare(pathB.prefix);
+            }
+            return pathA.number - pathB.number;
+        }
+        return 0;
+    });
+
+    // Create lines between sorted points within same prefix groups
+    let currentPrefix = null;
+    let lastPoint = null;
+    let lastImage = null;
+    let groupColor = null;
+
+    points.forEach((point, index) => {
+        let parsedPath = parseImagePath(point.path);
+        
         if (parsedPath) {
             if (currentPrefix !== parsedPath.prefix) {
                 // Start new group
                 currentPrefix = parsedPath.prefix;
-                lastPoint = p;
-                lastImage = currentImage;
-                // Generate new random color for this group
+                lastPoint = point.position;
+                lastImage = point.image;
                 groupColor = 'green';
-                continue;
+                return;
             }
 
             // Check height and proximity within same prefix group
             if (lastImage && lastPoint) {
-                let heightDiff = Math.abs(currentPos[2] - lastImage.position[2]);
+                let heightDiff = Math.abs(point.image.position[2] - lastImage.position[2]);
                 let horizontalDist = Math.sqrt(
-                    Math.pow(currentPos[0] - lastImage.position[0], 2) +
-                    Math.pow(currentPos[1] - lastImage.position[1], 2)
+                    Math.pow(point.image.position[0] - lastImage.position[0], 2) +
+                    Math.pow(point.image.position[1] - lastImage.position[1], 2)
                 );
 
                 // Only connect points if they meet both criteria
                 if (heightDiff <= heightThreshold && horizontalDist <= proximityThreshold) {
                     let lineFeature = new ol.Feature({
-                        geometry: new ol.geom.LineString([lastPoint, p])
+                        geometry: new ol.geom.LineString([lastPoint, point.position])
                     });
 
                     lineFeature.setStyle(new ol.style.Style({
@@ -793,10 +801,10 @@ export class MapView {
                 }
             }
             
-            lastPoint = p;
-            lastImage = currentImage;
+            lastPoint = point.position;
+            lastImage = point.image;
         }
-    }
+    });
 }
 
 // Helper method to create line features for a group
