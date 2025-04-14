@@ -1147,7 +1147,104 @@ export class PointCloudOctree extends PointCloudTree {
 		}
 
 	}
+	dispose() {
+		if (this.pcoGeometry) {
+			// Recursively dispose of OctreeGeometryNodes and their geometries
+			const disposeNode = (node) => {
+				if (node.geometry) {
+					if (node.geometry.attributes) {
+						for (const attributeName in node.geometry.attributes) {
+							if (node.geometry.attributes.hasOwnProperty(attributeName)) {
+								node.geometry.attributes[attributeName] = null;
+							}
+						}
+					}
+					if(node.geometry.index){
+						node.geometry.index.dispose();
+					}
+					node.geometry.dispose();
+				}
 
+				if (node.children) {
+					for (const child of Object.values(node.children)) {
+						disposeNode(child);
+					}
+				}
+			};
+
+			disposeNode(this.pcoGeometry.root);
+
+			this.pcoGeometry = null;
+			this.root = null;
+		}
+
+		//dispose of other resources as needed.
+		if(this.material){
+			if(this.material.map){
+				this.material.map.dispose();
+			}
+			this.material.dispose();
+			this.material = null;
+		}
+
+		if(this.boundingBoxNodes){
+			this.boundingBoxNodes.forEach(node => {
+				if (node.geometry) {
+					if (node.geometry.attributes) {
+						for (const attributeName in node.geometry.attributes) {
+							if (node.geometry.attributes.hasOwnProperty(attributeName)) {
+								node.geometry.attributes[attributeName] = null;
+							}
+						}
+					}
+					if(node.geometry.index){
+						node.geometry.index.dispose();
+					}
+					node.geometry.dispose();
+				}
+				if (node.material) {
+					if (node.material.map) {
+						node.material.map.dispose();
+					}
+					node.material.dispose();
+				}
+				if(node.parent){
+					node.parent.remove(node);
+				}
+			});
+			this.boundingBoxNodes = null;
+		}
+
+		if(this.visibleGeometry){
+			this.visibleGeometry.forEach(geometry => {
+				if (geometry) {
+					if(geometry.attributes){
+						for (const attributeName in geometry.attributes) {
+							if (geometry.attributes.hasOwnProperty(attributeName)) {
+								geometry.attributes[attributeName] = null;
+							}
+						}
+					}
+					if(geometry.index){
+						geometry.index.dispose();
+					}
+					geometry.dispose();
+				}
+			});
+			this.visibleGeometry = null;
+		}
+		if (this.parent){
+			this.parent.remove(this);
+		}
+		this.visibleNodes = null;
+		this.profileRequests = null;
+		this.loadQueue = null;
+		this.visibleGeometry = null;
+		this.profileRequests = null;
+		this.boundingBox = null;
+		this.boundingSphere = null;
+		this.boundingBoxNodes = null;
+	}
 }
 
 

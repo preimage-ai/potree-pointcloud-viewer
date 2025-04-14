@@ -129,6 +129,19 @@ let resourcePath = scriptPath + '/resources';
 // resourcePath:build/potree/resources
 export {scriptPath, resourcePath};
 
+const disposePointCloud = (pointcloud) => {
+	if (!pointcloud) {
+		return;
+	}
+	pointcloud.dispose();
+}
+
+export const cleanupPotree = (pointcloud) => {
+	// Potree.workerPool.dispose(); Disable async requests
+	disposePointCloud(pointcloud);
+	Potree.lru.cleanAll();
+	Potree.numNodesLoading = 0;
+}
 
 export function loadPointCloud(path, remainingPaths = undefined, matrix = [], name, callback){
 	let loaded = function(e){
