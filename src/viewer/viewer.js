@@ -3007,4 +3007,13 @@ export class Viewer extends EventDispatcher{
 		this.extMeasureScale = scale;
 	}
 
+	createVolume() {
+		let item = this.volumeTool.startInsertion({clip: true});
+
+		let measurementsRoot = $("#jstree_scene").jstree().get_json("measurements");
+		let jsonNode = measurementsRoot.children.find(child => child.data.uuid === item.uuid);
+		$.jstree.reference(jsonNode.id).deselect_all();
+		$.jstree.reference(jsonNode.id).select_node(jsonNode.id);
+	}
+
 };
