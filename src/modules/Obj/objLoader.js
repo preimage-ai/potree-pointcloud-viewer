@@ -9,7 +9,7 @@ export class OBJModelLoader {
 		this.textureLoader = new THREE.TextureLoader();
 	}
 
-	load({ objUrl, textureUrl, scene, name = "floor plan", matrix = null, visible = true, rotation = [- Math.PI / 2, 0, 0], }) {
+	load(objUrl, textureUrl, scene, name = "floor plan", matrix = null, visible = true, rotation = [- Math.PI / 2, 0, 0]) {
 		return new Promise((resolve, reject) => {
 			this.loader.load(objUrl, (object) => {
 				const texture = this.textureLoader.load(textureUrl);

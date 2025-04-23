@@ -42,7 +42,7 @@ export class IFC {
 
 				scene.addIfc(model.mesh);
 				resolve(model.mesh);
-			}, undefined, (error) => resolve(null));
+			}, undefined, (error) => reject(null));
 		});
 	};
 }
