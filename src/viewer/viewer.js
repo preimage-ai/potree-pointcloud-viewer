@@ -3016,4 +3016,31 @@ export class Viewer extends EventDispatcher{
 		$.jstree.reference(jsonNode.id).select_node(jsonNode.id);
 	}
 
+	objUncheck(){
+		const tree = $("#jstree_scene");
+		const objs = $("#jstree_scene").jstree().get_node("floor plan").children;
+		console.log("objs",objs);
+		if(objs.length > 0){
+			objs.forEach(node => {
+				const obj = $("#jstree_scene").jstree().get_node(node);
+				if (this.splitScreenEnabled) {
+					console.log("split obj.data.name",obj.data.name);
+					if (obj.data.name === "floor") {
+						$("#jstree_scene").jstree('check_node', node);
+					} else if (obj.data.name === "split-floor") {
+						$("#jstree_scene").jstree('check_node', node);
+					}
+				} else {
+					console.log("obj.data.name",obj.data.name);
+					if (obj.data.name === "floor") {
+						$("#jstree_scene").jstree('uncheck_node', node);
+					} else if (obj.data.name === "split-floor") {
+						$("#jstree_scene").jstree('uncheck_node', node);
+					}
+				}
+			});
+		}
+
+	};
+
 };

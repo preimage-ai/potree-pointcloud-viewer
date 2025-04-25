@@ -403,7 +403,7 @@ export class Sidebar{
 
 		let pcID = tree.jstree('create_node', "#", { "text": "<b>Point Clouds</b>", "id": "pointclouds"}, "last", false, false);
 		let ifcID = tree.jstree('create_node', "#", { "text": "<b>IFC</b>", "id": "ifc"}, "last", false, false);
-		let objID = tree.jstree('create_node', "#", { "text": "<b>Floor Plan</b>", "id": "ifc"}, "last", false, false);
+		let objID = tree.jstree('create_node', "#", { "text": "<b>Floor Plan</b>", "id": "floor plan"}, "last", false, false);
 		let measurementID = tree.jstree('create_node', "#", { "text": "<b>Measurements</b>", "id": "measurements" }, "last", false, false);
 		let annotationsID = tree.jstree('create_node', "#", { "text": "<b>Annotations</b>", "id": "annotations" }, "last", false, false);
 		let otherID = tree.jstree('create_node', "#", { "text": "<b>Other</b>", "id": "other" }, "last", false, false);
