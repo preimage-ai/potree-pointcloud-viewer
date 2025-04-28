@@ -46,6 +46,8 @@ export class Viewer extends EventDispatcher{
 		this.renderArea = domElement;
 		this.splitWidth = null;
 		this.overlayPtcld = true;
+		this.floorPlanEnabled = false;
+		this.thumbnailEnabled = false;
 		this.guiLoaded = false;
 		this.guiLoadTasks = [];
 		this.cameraX = 10;
@@ -2999,6 +3001,50 @@ export class Viewer extends EventDispatcher{
 
 	setExternalMeasureScale(scale){
 		this.extMeasureScale = scale;
+	}
+
+	createVolume() {
+		let item = this.volumeTool.startInsertion({clip: true});
+
+		let measurementsRoot = $("#jstree_scene").jstree().get_json("measurements");
+		let jsonNode = measurementsRoot.children.find(child => child.data.uuid === item.uuid);
+		$.jstree.reference(jsonNode.id).deselect_all();
+		$.jstree.reference(jsonNode.id).select_node(jsonNode.id);
+	}
+
+	objUncheck(){
+		const tree = $("#jstree_scene");
+		const objs = $("#jstree_scene").jstree().get_node("floor plan").children;
+		console.log("objs",objs);
+		if(objs.length > 0){
+			objs.forEach(node => {
+				const obj = $("#jstree_scene").jstree().get_node(node);
+				if (this.splitScreenEnabled) {
+					console.log("split obj.data.name",obj.data.name);
+					if (obj.data.name === "floor") {
+						$("#jstree_scene").jstree('check_node', node);
+					} else if (obj.data.name === "split-floor") {
+						$("#jstree_scene").jstree('check_node', node);
+					}
+				} else {
+					console.log("obj.data.name",obj.data.name);
+					if (obj.data.name === "floor") {
+						$("#jstree_scene").jstree('uncheck_node', node);
+					} else if (obj.data.name === "split-floor") {
+						$("#jstree_scene").jstree('uncheck_node', node);
+					}
+				}
+			});
+		}
+
+	};
+
+	setFloorPlan(url, center, width, height) {
+		this.mapView.floorPlan = { url, center, width, height };
+	}
+	  
+	setThumbnail(url, center, width, height) {
+		this.mapView.thumbnail = { url, center, width, height };
 	}
 
 };
