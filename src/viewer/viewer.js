@@ -47,6 +47,8 @@ export class Viewer extends EventDispatcher{
 		this.renderArea = domElement;
 		this.splitWidth = null;
 		this.overlayPtcld = true;
+		this.floorPlanEnabled = false;
+		this.thumbnailEnabled = false;
 		this.guiLoaded = false;
 		this.guiLoadTasks = [];
 		this.cameraX = 10;
@@ -3042,5 +3044,13 @@ export class Viewer extends EventDispatcher{
 		}
 
 	};
+
+	setFloorPlan(url, center, width, height) {
+		this.mapView.floorPlan = { url, center, width, height };
+	}
+	  
+	setThumbnail(url, center, width, height) {
+		this.mapView.thumbnail = { url, center, width, height };
+	}
 
 };

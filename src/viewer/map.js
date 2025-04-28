@@ -64,6 +64,8 @@ export class MapView {
     this.mapProjection = proj4.defs(this.mapProjectionName);
     console.log("map projection", this.mapProjection);
     this.sceneProjection = null;
+    this.floorPlan = {};
+    this.thumbnail = {};
 
     this.extentsLayer = null;
     this.cameraLayer = null;
@@ -223,8 +225,6 @@ export class MapView {
           link.download = "list_of_files.txt";
         }
       };
-
-      button.addEventListener("click", handleDownload, false);
 
       // assemble container
       let element = document.createElement("div");
@@ -389,6 +389,7 @@ export class MapView {
     // });
 
     this.setScene(this.viewer.scene);
+    this.addMapButtons();
   }
 
   setScene(scene) {
@@ -1054,5 +1055,88 @@ export class MapView {
 
   set sourcesVisible(value) {
     this.getSourcesLayer().setVisible(value);
+  }
+
+  addMapButtons() {
+    const mapContainer = this.map.getTargetElement();
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = "ol-unselectable ol-control"
+    buttonContainer.style.position = 'absolute';
+    buttonContainer.style.bottom = '0.5em';
+    buttonContainer.style.right = '0.5em';
+  
+    const createButton = (label, onClick) => {
+      const button = document.createElement('button');
+      button.innerHTML = label;
+      button.addEventListener('click', onClick);
+      return button;
+    };
+  
+    const floorPlanButton = createButton('F', () => {
+      if (!this.viewer.floorPlanEnabled) {
+        if (this.viewer.thumbnailEnabled) {
+          this.removeMiniMapImage(this.thumbnail.url);
+        }
+        if (this.floorPlan.url) {
+          this.viewer.setMiniMapImageInPotree(
+            this.floorPlan.url,
+            {
+              x: this.floorPlan.center.x,
+              y: this.floorPlan.center.y,
+            },
+            this.floorPlan.width,
+            this.floorPlan.height,
+          );
+          this.viewer.floorPlanEnabled = true;
+          this.viewer.thumbnailEnabled = false
+        } else {
+          console.warn('Floor plan data not available.');
+          alert('Floor plan data not available.');
+        }
+      }
+    });
+  
+    const thumbnailButton = createButton('T', () => {
+      if (!this.viewer.thumbnailEnabled) {
+        if (this.viewer.floorPlanEnabled) {
+          this.removeMiniMapImage(this.floorPlan.url);
+        }
+        if (this.thumbnail.url) {
+          this.viewer.setMiniMapImageInPotree(
+            this.thumbnail.url,
+            {
+              x: this.thumbnail.center.x,
+              y: this.thumbnail.center.y,
+            },
+            this.thumbnail.width,
+            this.thumbnail.height
+          );
+          this.viewer.floorPlanEnabled = false;
+          this.viewer.thumbnailEnabled = true
+        } else {
+          console.warn('Thumbnail data not available.');
+          alert('Thumbnail data not available.');
+        }
+      }
+    });
+  
+    buttonContainer.appendChild(floorPlanButton);
+    buttonContainer.appendChild(thumbnailButton);
+
+    ol.control.Control.call(this, {
+      element: buttonContainer,
+    });
+    mapContainer.appendChild(buttonContainer);
+  }
+
+  removeMiniMapImage(urlToRemove) {
+    if (this.staticImageLayers && this.staticImageLayers.has(urlToRemove)) {
+      const layerToRemove = this.staticImageLayers.get(urlToRemove);
+      this.map.removeLayer(layerToRemove);
+      this.staticImageLayers.delete(urlToRemove);
+      console.log(`Removed mini-map image layer with URL: ${urlToRemove}`);
+    } else {
+      console.warn(`No mini-map image layer found with URL: ${urlToRemove}`);
+    }
   }
 }
