@@ -1,4 +1,3 @@
-
 import * as THREE from "../../libs/three.js/build/three.module.js";
 import { IFCLoader } from "../../libs/three.js/extra/IFCLoader.js";
 import {ClipTask, ClipMethod, CameraMode, LengthUnits, ElevationGradientRepeat} from "../defines.js";
@@ -47,6 +46,8 @@ export class Viewer extends EventDispatcher{
 		this.renderArea = domElement;
 		this.splitWidth = null;
 		this.overlayPtcld = true;
+		this.floorPlanEnabled = false;
+		this.thumbnailEnabled = false;
 		this.guiLoaded = false;
 		this.guiLoadTasks = [];
 		this.cameraX = 10;
@@ -55,6 +56,7 @@ export class Viewer extends EventDispatcher{
 		this.qX=0;
 		this.qY=0;
 		this.qZ=0;
+		this.qW=0;
 		this.interpolate=0;
 		this.fov=0;
 		this.shouldFocus=false;
@@ -2497,19 +2499,12 @@ export class Viewer extends EventDispatcher{
 	}
       camera.fov=this.fov;
 	  // Rotation Lerping with Quaternions
-	  const euler = new THREE.Euler(
-		  THREE.MathUtils.degToRad(this.qX),
-		  THREE.MathUtils.degToRad(this.qY),
-		  THREE.MathUtils.degToRad(this.qZ),
-		  "ZYX"
-	  );
-	  // Convert target rotation to Quaternion
-	  const targetQuaternion = new THREE.Quaternion().setFromEuler(euler);
+	  const targetQuaternion = new THREE.Quaternion(this.qX, this.qY, this.qZ, this.qW);
 	  // Interpolate rotation
 	  camera.quaternion.slerp(targetQuaternion, this.rotateInterpolate);
 	  camera.updateProjectionMatrix();
-	  //console.log("this is it "+"qx "+this.qX+ " "+THREE.MathUtils.degToRad(this.qX)+"qx "+this.qY+ " "+THREE.MathUtils.degToRad(this.qY)+"qx "+this.qZ+ " "+THREE.MathUtils.degToRad(this.qZ));
-	//console.log("this is the new camera position "+camera.position.x);
+	//   console.log("this is it "+"qx "+this.qX+ " "+THREE.MathUtils.degToRad(this.qX)+"qx "+this.qY+ " "+THREE.MathUtils.degToRad(this.qY)+"qx "+this.qZ+ " "+THREE.MathUtils.degToRad(this.qZ));
+	// console.log("this is the new camera position ",camera.position);
     if (this.splitScreenEnabled) {
 		pRenderer.clear();
 		this.renderer.clear();
@@ -2925,10 +2920,11 @@ export class Viewer extends EventDispatcher{
      this.fov=fov;
 	}
 
-	changeRotation(x,y,z,interpolate,isFocused){
+	changeRotation(x,y,z,w,interpolate,isFocused){
        this.qX=x;
 	   this.qY=y;
 	   this.qZ=z;
+	   this.qW=w;
        this.rotateInterpolate=interpolate;
 	   this.shouldFocus=isFocused;
 	   //console.log("This is the qz in changeRotation "+this.qz);
@@ -3005,6 +3001,50 @@ export class Viewer extends EventDispatcher{
 
 	setExternalMeasureScale(scale){
 		this.extMeasureScale = scale;
+	}
+
+	createVolume() {
+		let item = this.volumeTool.startInsertion({clip: true});
+
+		let measurementsRoot = $("#jstree_scene").jstree().get_json("measurements");
+		let jsonNode = measurementsRoot.children.find(child => child.data.uuid === item.uuid);
+		$.jstree.reference(jsonNode.id).deselect_all();
+		$.jstree.reference(jsonNode.id).select_node(jsonNode.id);
+	}
+
+	objUncheck(){
+		const tree = $("#jstree_scene");
+		const objs = $("#jstree_scene").jstree().get_node("floor plan").children;
+		console.log("objs",objs);
+		if(objs.length > 0){
+			objs.forEach(node => {
+				const obj = $("#jstree_scene").jstree().get_node(node);
+				if (this.splitScreenEnabled) {
+					console.log("split obj.data.name",obj.data.name);
+					if (obj.data.name === "floor") {
+						$("#jstree_scene").jstree('check_node', node);
+					} else if (obj.data.name === "split-floor") {
+						$("#jstree_scene").jstree('check_node', node);
+					}
+				} else {
+					console.log("obj.data.name",obj.data.name);
+					if (obj.data.name === "floor") {
+						$("#jstree_scene").jstree('uncheck_node', node);
+					} else if (obj.data.name === "split-floor") {
+						$("#jstree_scene").jstree('uncheck_node', node);
+					}
+				}
+			});
+		}
+
+	};
+
+	setFloorPlan(url, center, width, height) {
+		this.mapView.floorPlan = { url, center, width, height };
+	}
+	  
+	setThumbnail(url, center, width, height) {
+		this.mapView.thumbnail = { url, center, width, height };
 	}
 
 };

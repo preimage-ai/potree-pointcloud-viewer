@@ -27,6 +27,7 @@ export class Scene extends EventDispatcher{
 		this.overrideCamera = null;
 		this.pointclouds = [];
 		this.ifc=[];
+		this.obj=[];
 
 		this.measurements = [];
 		this.profiles = [];
@@ -137,6 +138,14 @@ export class Scene extends EventDispatcher{
 		this.dispatchEvent({
 			type: 'ifc_added',
 			ifc: ifc
+		});
+	};
+
+	addObj(obj){
+		this.obj.push(obj);
+		this.dispatchEvent({
+			type: 'obj_added',
+			obj: obj
 		});
 	};
 

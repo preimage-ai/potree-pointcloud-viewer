@@ -64,6 +64,8 @@ export class MapView {
     this.mapProjection = proj4.defs(this.mapProjectionName);
     console.log("map projection", this.mapProjection);
     this.sceneProjection = null;
+    this.floorPlan = {};
+    this.thumbnail = {};
 
     this.extentsLayer = null;
     this.cameraLayer = null;
@@ -223,8 +225,6 @@ export class MapView {
           link.download = "list_of_files.txt";
         }
       };
-
-      button.addEventListener("click", handleDownload, false);
 
       // assemble container
       let element = document.createElement("div");
@@ -389,6 +389,7 @@ export class MapView {
     // });
 
     this.setScene(this.viewer.scene);
+    this.addMapButtons();
   }
 
   setScene(scene) {
@@ -699,47 +700,141 @@ export class MapView {
     let transform = this.toMap.forward;
     let layer = this.getImages360Layer();
     
-    // Create points and connect with lines
-    for (let i = 0; i < images.images.length; i++) {
-        let p = transform([
-            images.images[i].position[0],
-            images.images[i].position[1],
-        ]);
+    const heightThreshold = 1.2;
+    const proximityThreshold = 9;
+    
+    // Helper function to get prefix and numeric value
+    const parseImagePath = (path) => {
+        const match = path.match(/(\d+)_(\d+)_(\d+)/);
+        if (match) {
+            return {
+                prefix: `${match[1]}_${match[2]}`,
+                number: parseInt(match[3])
+            };
+        }
+        return null;
+    };
 
-        // Create point feature
+    // First create all point features with correct indices
+    let points = [];
+    for (let i = 0; i < images.images.length; i++) {
+        let currentImage = images.images[i];
+        let currentPos = currentImage.position;
+        
+        let p = transform([currentPos[0], currentPos[1]]);
         let pointFeature = new ol.Feature({
             geometry: new ol.geom.Point(p)
         });
 
+        // Add click handler with original index
         pointFeature.onClick = () => {
-            images.focus(images.images[i]);
+            images.focus(currentImage);
             var evt = new CustomEvent("piHotSpotClickMiniMapEvent", { detail: i });
             window.dispatchEvent(evt);
         };
-
+        
         layer.getSource().addFeature(pointFeature);
+        
+        // Store point info for line creation
+        points.push({
+            feature: pointFeature,
+            image: currentImage,
+            position: p,
+            path: currentImage.file
+        });
+    }
 
-        // Create line to next point if not last point
-        if (i < images.images.length - 1) {
-            let nextP = transform([
-                images.images[i + 1].position[0],
-                images.images[i + 1].position[1],
-            ]);
+    // Now sort points by prefix for line creation
+    points.sort((a, b) => {
+        const pathA = parseImagePath(a.path);
+        const pathB = parseImagePath(b.path);
 
-            let lineFeature = new ol.Feature({
-                geometry: new ol.geom.LineString([p, nextP])
-            });
-
-            // Set line style
-            lineFeature.setStyle(new ol.style.Style({
-                stroke: new ol.style.Stroke({
-                    color: 'green',
-                    width: 2
-                })
-            }));
-
-            layer.getSource().addFeature(lineFeature);
+        if (pathA && pathB) {
+            if (pathA.prefix !== pathB.prefix) {
+                return pathA.prefix.localeCompare(pathB.prefix);
+            }
+            return pathA.number - pathB.number;
         }
+        return 0;
+    });
+
+    // Create lines between sorted points within same prefix groups
+    let currentPrefix = null;
+    let lastPoint = null;
+    let lastImage = null;
+    let groupColor = null;
+
+    points.forEach((point, index) => {
+        let parsedPath = parseImagePath(point.path);
+        
+        if (parsedPath) {
+            if (currentPrefix !== parsedPath.prefix) {
+                // Start new group
+                currentPrefix = parsedPath.prefix;
+                lastPoint = point.position;
+                lastImage = point.image;
+                groupColor = 'green';
+                return;
+            }
+
+            // Check height and proximity within same prefix group
+            if (lastImage && lastPoint) {
+                let heightDiff = Math.abs(point.image.position[2] - lastImage.position[2]);
+                let horizontalDist = Math.sqrt(
+                    Math.pow(point.image.position[0] - lastImage.position[0], 2) +
+                    Math.pow(point.image.position[1] - lastImage.position[1], 2)
+                );
+
+                // Only connect points if they meet both criteria
+                if (heightDiff <= heightThreshold && horizontalDist <= proximityThreshold) {
+                    let lineFeature = new ol.Feature({
+                        geometry: new ol.geom.LineString([lastPoint, point.position])
+                    });
+
+                    lineFeature.setStyle(new ol.style.Style({
+                        stroke: new ol.style.Stroke({
+                            color: groupColor,
+                            width: 2
+                        })
+                    }));
+
+                    layer.getSource().addFeature(lineFeature);
+                }
+            }
+            
+            lastPoint = point.position;
+            lastImage = point.image;
+        }
+    });
+}
+
+// Helper method to create line features for a group
+createLineFeatures(group, transform, layer) {
+    for (let i = 0; i < group.length - 1; i++) {
+        let p1 = transform([
+            group[i].position[0],
+            group[i].position[1]
+        ]);
+        
+        let p2 = transform([
+            group[i + 1].position[0],
+            group[i + 1].position[1]
+        ]);
+
+        let lineFeature = new ol.Feature({
+            geometry: new ol.geom.LineString([p1, p2])
+        });
+
+        // Create a random color for this group
+        // Set line style
+        lineFeature.setStyle(new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: "green",
+                width: 2
+            })
+        }));
+
+        layer.getSource().addFeature(lineFeature);
     }
 }
 
@@ -1054,5 +1149,88 @@ export class MapView {
 
   set sourcesVisible(value) {
     this.getSourcesLayer().setVisible(value);
+  }
+
+  addMapButtons() {
+    const mapContainer = this.map.getTargetElement();
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = "ol-unselectable ol-control"
+    buttonContainer.style.position = 'absolute';
+    buttonContainer.style.bottom = '0.5em';
+    buttonContainer.style.right = '0.5em';
+  
+    const createButton = (label, onClick) => {
+      const button = document.createElement('button');
+      button.innerHTML = label;
+      button.addEventListener('click', onClick);
+      return button;
+    };
+  
+    const floorPlanButton = createButton('F', () => {
+      if (!this.viewer.floorPlanEnabled) {
+        if (this.viewer.thumbnailEnabled) {
+          this.removeMiniMapImage(this.thumbnail.url);
+        }
+        if (this.floorPlan.url) {
+          this.viewer.setMiniMapImageInPotree(
+            this.floorPlan.url,
+            {
+              x: this.floorPlan.center.x,
+              y: this.floorPlan.center.y,
+            },
+            this.floorPlan.width,
+            this.floorPlan.height,
+          );
+          this.viewer.floorPlanEnabled = true;
+          this.viewer.thumbnailEnabled = false
+        } else {
+          console.warn('Floor plan data not available.');
+          alert('Floor plan data not available.');
+        }
+      }
+    });
+  
+    const thumbnailButton = createButton('T', () => {
+      if (!this.viewer.thumbnailEnabled) {
+        if (this.viewer.floorPlanEnabled) {
+          this.removeMiniMapImage(this.floorPlan.url);
+        }
+        if (this.thumbnail.url) {
+          this.viewer.setMiniMapImageInPotree(
+            this.thumbnail.url,
+            {
+              x: this.thumbnail.center.x,
+              y: this.thumbnail.center.y,
+            },
+            this.thumbnail.width,
+            this.thumbnail.height
+          );
+          this.viewer.floorPlanEnabled = false;
+          this.viewer.thumbnailEnabled = true
+        } else {
+          console.warn('Thumbnail data not available.');
+          alert('Thumbnail data not available.');
+        }
+      }
+    });
+  
+    buttonContainer.appendChild(floorPlanButton);
+    buttonContainer.appendChild(thumbnailButton);
+
+    ol.control.Control.call(this, {
+      element: buttonContainer,
+    });
+    mapContainer.appendChild(buttonContainer);
+  }
+
+  removeMiniMapImage(urlToRemove) {
+    if (this.staticImageLayers && this.staticImageLayers.has(urlToRemove)) {
+      const layerToRemove = this.staticImageLayers.get(urlToRemove);
+      this.map.removeLayer(layerToRemove);
+      this.staticImageLayers.delete(urlToRemove);
+      console.log(`Removed mini-map image layer with URL: ${urlToRemove}`);
+    } else {
+      console.warn(`No mini-map image layer found with URL: ${urlToRemove}`);
+    }
   }
 }
