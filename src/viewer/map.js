@@ -1187,6 +1187,8 @@ createLineFeatures(group, transform, layer) {
           console.warn('Floor plan data not available.');
           alert('Floor plan data not available.');
         }
+        this.viewer.floorPlanEnabled = true;
+        this.viewer.thumbnailEnabled = false
       }
     });
   
@@ -1205,12 +1207,12 @@ createLineFeatures(group, transform, layer) {
             this.thumbnail.width,
             this.thumbnail.height
           );
-          this.viewer.floorPlanEnabled = false;
-          this.viewer.thumbnailEnabled = true
         } else {
           console.warn('Thumbnail data not available.');
           alert('Thumbnail data not available.');
         }
+        this.viewer.floorPlanEnabled = false;
+        this.viewer.thumbnailEnabled = true
       }
     });
   

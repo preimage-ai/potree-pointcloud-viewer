@@ -352,14 +352,16 @@ export class Images360Loader{
 			let xy = params.transform.forward([long, lat]);
 			let originalPosition = new THREE.Vector3(xy[0], xy[1], alt);
 			// Transform the position
-			const mat = new THREE.Matrix4();
-			mat.set(
-				matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
-				matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
-				matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
-				matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
-			);
-			originalPosition.applyMatrix4(mat);
+			if (matrix && matrix.length > 0) {
+				const mat = new THREE.Matrix4();
+				mat.set(
+					matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+					matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+					matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+					matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+				);
+				originalPosition.applyMatrix4(mat);
+			}
 			image360.position = [originalPosition.x, originalPosition.y, originalPosition.z];
 			images360.images.push(image360);
 		}
