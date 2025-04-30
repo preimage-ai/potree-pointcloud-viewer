@@ -3004,12 +3004,14 @@ export class Viewer extends EventDispatcher{
 	}
 
 	createVolume() {
-		let item = this.volumeTool.startInsertion({clip: true});
+		let volume  = new BoxVolume();
+		volume.name = "clip_volume";
+		if (this.scene.pointclouds.length > 0) {
+			volume.scale.set(this.scene.pointclouds[0].boundingBox.max.x - this.scene.pointclouds[0].boundingBox.min.x, this.scene.pointclouds[0].boundingBox.max.y - this.scene.pointclouds[0].boundingBox.min.y, this.scene.pointclouds[0].boundingBox.max.z - this.scene.pointclouds[0].boundingBox.min.z);
+		}
+		volume.clip = true;
 
-		let measurementsRoot = $("#jstree_scene").jstree().get_json("measurements");
-		let jsonNode = measurementsRoot.children.find(child => child.data.uuid === item.uuid);
-		$.jstree.reference(jsonNode.id).deselect_all();
-		$.jstree.reference(jsonNode.id).select_node(jsonNode.id);
+		this.scene.addVolume(volume);
 	}
 
 	objUncheck(){
