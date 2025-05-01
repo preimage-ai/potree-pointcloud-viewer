@@ -1039,8 +1039,8 @@ createLineFeatures(group, transform, layer) {
 
   changeMiniMapPosition(top, left, size, url, center, width, height) {
     //console.log("this is called how many tiems ");
-    this.elMap.css("top", `${top / 2}vh`);
-    this.elMap.css("left", `${left / 2}vw`);
+    if (top !== undefined) this.elMap.css("top", `${top / 2}vh`);
+    if (left !== undefined) this.elMap.css("left", `${left / 2}vw`);
     this.elMap.css("width", `${size}px`);
     this.elMap.css("height", `${size}px`);
     let elMapHeader = $("#potree_map_header");
@@ -1052,8 +1052,10 @@ createLineFeatures(group, transform, layer) {
     elMapHeader.css("border-radius", "4px");
     elMapHeader.css("top", "10px");
     if (this.calledOnce == true) return;
-    this.elMap.css("display", "block");
-    this.enabled = true;
+    if (this.viewer.isUnityView()) {
+      this.elMap.css("display", "block");
+      this.enabled = true;
+    }
     let view = this.map.getView();
     let extendsSize = 300;
     if (size <= 150) {
@@ -1187,6 +1189,8 @@ createLineFeatures(group, transform, layer) {
           console.warn('Floor plan data not available.');
           alert('Floor plan data not available.');
         }
+        this.viewer.floorPlanEnabled = true;
+        this.viewer.thumbnailEnabled = false
       }
     });
   
@@ -1205,12 +1209,12 @@ createLineFeatures(group, transform, layer) {
             this.thumbnail.width,
             this.thumbnail.height
           );
-          this.viewer.floorPlanEnabled = false;
-          this.viewer.thumbnailEnabled = true
         } else {
           console.warn('Thumbnail data not available.');
           alert('Thumbnail data not available.');
         }
+        this.viewer.floorPlanEnabled = false;
+        this.viewer.thumbnailEnabled = true
       }
     });
   
