@@ -3007,7 +3007,23 @@ export class Viewer extends EventDispatcher{
 		let volume  = new BoxVolume();
 		volume.name = 'Volume';
 		if (this.scene.pointclouds.length > 0) {
-			volume.scale.set(this.scene.pointclouds[0].boundingBox.max.x - this.scene.pointclouds[0].boundingBox.min.x, this.scene.pointclouds[0].boundingBox.max.y - this.scene.pointclouds[0].boundingBox.min.y, this.scene.pointclouds[0].boundingBox.max.z - this.scene.pointclouds[0].boundingBox.min.z);
+			const pointcloud = this.scene.pointclouds[0];
+			const geometry = pointcloud.pcoGeometry;
+
+			geometry.tightBoundingBox = geometry.tightBoundingBox || geometry.boundingBox;
+
+			const box = geometry.tightBoundingBox.clone();
+
+			box.min.add(pointcloud.position);
+			box.max.add(pointcloud.position);
+
+			const size = new THREE.Vector3();
+			box.getSize(size);
+			const center = new THREE.Vector3();
+			box.getCenter(center);
+
+			volume.scale.set(size.x, size.y, size.z);
+			volume.position.copy(center);
 		}
 		volume.clip = clip;
 		this.scene.addVolume(volume);
