@@ -10,6 +10,7 @@ export class VolumeTool extends EventDispatcher{
 
 		this.viewer = viewer;
 		this.renderer = viewer.renderer;
+		this.userControl = false;
 
 		this.addEventListener('start_inserting_volume', e => {
 			this.viewer.dispatchEvent({

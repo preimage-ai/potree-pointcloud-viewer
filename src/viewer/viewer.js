@@ -3003,15 +3003,15 @@ export class Viewer extends EventDispatcher{
 		this.extMeasureScale = scale;
 	}
 
-	createVolume() {
+	createVolume(clip = false) {
 		let volume  = new BoxVolume();
-		volume.name = "clip_volume";
+		volume.name = 'Volume';
 		if (this.scene.pointclouds.length > 0) {
 			volume.scale.set(this.scene.pointclouds[0].boundingBox.max.x - this.scene.pointclouds[0].boundingBox.min.x, this.scene.pointclouds[0].boundingBox.max.y - this.scene.pointclouds[0].boundingBox.min.y, this.scene.pointclouds[0].boundingBox.max.z - this.scene.pointclouds[0].boundingBox.min.z);
 		}
-		volume.clip = true;
-
+		volume.clip = clip;
 		this.scene.addVolume(volume);
+		return volume;
 	}
 
 	objUncheck(){

@@ -217,7 +217,12 @@ export class Sidebar{
 			Potree.resourcePath + '/icons/volume.svg',
 			'[title]tt.volume_measurement',
 			() => {
-				let volume = this.volumeTool.startInsertion(); 
+				let volume;
+				if (this.volumeTool.userControl) {
+					volume = this.volumeTool.startInsertion(); 
+				} else {
+					volume = this.viewer.createVolume();
+				}
 
 				let measurementsRoot = $("#jstree_scene").jstree().get_json("measurements");
 				let jsonNode = measurementsRoot.children.find(child => child.data.uuid === volume.uuid);
@@ -863,7 +868,12 @@ export class Sidebar{
 			Potree.resourcePath + '/icons/clip_volume.svg',
 			'[title]tt.clip_volume',
 			() => {
-				let item = this.volumeTool.startInsertion({clip: true}); 
+				let item;
+				if (this.volumeTool.userControl) {
+					item = this.volumeTool.startInsertion({clip: true});
+				} else {
+					item = this.viewer.createVolume(true);
+				}
 
 				let measurementsRoot = $("#jstree_scene").jstree().get_json("measurements");
 				let jsonNode = measurementsRoot.children.find(child => child.data.uuid === item.uuid);
@@ -919,6 +929,11 @@ export class Sidebar{
 				}
 			));
 		}
+		let userControlCheckbox = $('#userControlEnabled');
+		userControlCheckbox.prop('checked', this.volumeTool.userControl);
+		userControlCheckbox.on('change', () => {
+			this.volumeTool.userControl = userControlCheckbox.prop('checked');
+		});
 
 	}
 
