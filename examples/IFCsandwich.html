@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="utf-8">
 	<meta name="description" content="">
@@ -27,17 +28,18 @@
 	<script src="../../libs/jstree/jstree.js"></script>
 	<script src="../../build/potree/potree.js"></script>
 	<script src="../../libs/plasio/js/laslaz.js"></script>
-	
-	
+
+
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
-		<div id="potree_render_area" style="background-image: url('../../build/potree/resources/images/background.jpg');"> </div>
-        <div id="potree_sidebar_container"></div>
+		<div id="potree_render_area" style="background-image: url('../../build/potree/resources/images/background.jpg');">
+		</div>
+		<div id="potree_sidebar_container"></div>
 	</div>
-	
+
 	<script type="module">
 
-	import * as THREE from "../libs/three.js/build/three.module.js";
-	import { IFCLoader } from "../libs/three.js/extra/IFCLoader.js";
+		import * as THREE from "../libs/three.js/build/three.module.js";
+		import { IFCLoader } from "../libs/three.js/extra/IFCLoader.js";
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
 		const ifc = new Potree.IFC(viewer);
 		console.log(ifc);
@@ -49,46 +51,46 @@
 		Click on a sphere to enter 360 view. Click "unfocus" to leave 360 view. <br>
 		Point cloud courtesy of <a href="http://www.helimap.com/">Helimap System SA</a>. Images were downsized for this online demo; Original size is 8000x400.`);
 		viewer.loadGUI(() => {
-            viewer.setLanguage('en');
-            // $("#menu_appearance").next().show();
-            // viewer.toggleMap();
-            viewer.toggleSidebar();
-        });
+			viewer.setLanguage('en');
+			// $("#menu_appearance").next().show();
+			// viewer.toggleMap();
+			viewer.toggleSidebar();
+		});
 
 		// keep your 360 data in example folder by potree name
 		const url = 'potree/metadata.json';
-        const hierarchyUrl = 'potree/hierarchy.bin';
-        const octreeUrl = 'potree/octree.bin';
-        const otherPath = {
-            octree: octreeUrl,
-            hierarchy: hierarchyUrl,
-        };
+		const hierarchyUrl = 'potree/hierarchy.bin';
+		const octreeUrl = 'potree/octree.bin';
+		const otherPath = {
+			octree: octreeUrl,
+			hierarchy: hierarchyUrl,
+		};
 		// Load and add point cloud to scene
 		const matrix = [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, 1, 0],
-                [0, 0, 0, 1]
-              ];
-			  let el;
+			[1, 0, 0, 0],
+			[0, 1, 0, 0],
+			[0, 0, 1, 0],
+			[0, 0, 0, 1]
+		];
+		let el;
 		Potree.loadPointCloud(url, otherPath, matrix, "ptcld", e => {
 			console.log("eee", e);
 			console.log("potree", Potree);
 			let scene = viewer.scene;
-			let pointcloud = e.pointcloud;	
-			el=pointcloud;	
+			let pointcloud = e.pointcloud;
+			el = pointcloud;
 			console.log("scene", viewer.scene);
 
-						// const mat = new THREE.Matrix4();
-						// mat.set(
-						// 	matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
-						// 	matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
-						// 	matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
-						// 	matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
-						// );
-						// pointcloud.applyMatrix4(mat);
-						// pointcloud.updateMatrixWorld( true );
-						console.log("pointcloud split", pointcloud);
+			// const mat = new THREE.Matrix4();
+			// mat.set(
+			// 	matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+			// 	matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+			// 	matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3],
+			// 	matrix[3][0], matrix[3][1], matrix[3][2], matrix[3][3]
+			// );
+			// pointcloud.applyMatrix4(mat);
+			// pointcloud.updateMatrixWorld( true );
+			console.log("pointcloud split", pointcloud);
 			let material = pointcloud.material;
 			material.size = 0.5;
 			material.minSize = 2.0;
@@ -100,7 +102,7 @@
 			viewer.fitToScreen();
 			console.log("lru inside", Potree.lru);
 			console.log("renderer", viewer.renderer)
-			
+
 		});
 		const ifcLoader = new IFCLoader();
 		ifcLoader.ifcManager.setWasmPath('../libs/three.js/extra/ifc/');
@@ -119,156 +121,157 @@
 			console.log(unitAssignment)
 
 			let lengthUnit = null;
-        let scaleFactor = 1.0;
-        
-        // Check each unit in the Units array
-        for (let i = 0; i < unitAssignment.Units.length; i++) {
-            const unitRef = unitAssignment.Units[i];
-            const unitId = unitRef.value;
-            
-            // Get the properties of each unit
-            const unit = await ifcLoader.ifcManager.getItemProperties(
-                model.modelID,
-                unitId
-            );
-            
-            console.log(`Unit ${i} (ID: ${unitId}):`, unit);
-            
-            // Check if this is a length unit
-            if (unit.UnitType && unit.UnitType.value === 'LENGTHUNIT') {
-                console.log("🎯 Found length unit!");
-                console.log("Unit Name:", unit.Name?.value);
-                console.log("Unit Prefix:", unit.Prefix?.value);
-                console.log("Full unit object:", unit);
-                
-                lengthUnit = unit;
-                
-                // Determine scale factor based on the unit
-                const unitName = unit.Name?.value;
-                const prefix = unit.Prefix?.value;
-                
-                if (unitName === 'METRE') {
-                    if (prefix === 'MILLI') {
-                        scaleFactor = 0.001; // millimeters to meters
-                    } else if (prefix === 'CENTI') {
-                        scaleFactor = 0.01; // centimeters to meters
-                    } else {
-                        scaleFactor = 1.0; // meters
-                    }
-                } else if (unitName === 'FOOT') {
-                    scaleFactor = 0.3048; // feet to meters
-                } else if (unitName === 'INCH') {
-                    scaleFactor = 0.0254; // inches to meters
-                } else {
-                    console.warn(`Unknown unit: ${prefix || ''}${unitName}`);
-                    scaleFactor = 1.0;
-                }
-                
-                console.log(`Scale factor determined: ${scaleFactor}`);
-                break; // Found the length unit, no need to continue
-            }
-        }
+			let scaleFactor = 1.0;
 
-				if (lengthUnit) {
-            console.log(`Applying scale factor: ${scaleFactor} for unit: ${lengthUnit.Prefix?.value || ''}${lengthUnit.Name?.value}`);
-            model.mesh.scale.multiplyScalar(scaleFactor);
-        } else {
-            console.log("No length unit found, using default scaling");
-            model.mesh.scale.multiplyScalar(0.3048); // Default to feet-to-meters
-        }
+			// Check each unit in the Units array
+			for (let i = 0; i < unitAssignment.Units.length; i++) {
+				const unitRef = unitAssignment.Units[i];
+				const unitId = unitRef.value;
+
+				// Get the properties of each unit
+				const unit = await ifcLoader.ifcManager.getItemProperties(
+					model.modelID,
+					unitId
+				);
+
+				console.log(`Unit ${i} (ID: ${unitId}):`, unit);
+
+				// Check if this is a length unit
+				if (unit.UnitType && unit.UnitType.value === 'LENGTHUNIT') {
+					console.log("🎯 Found length unit!");
+					console.log("Unit Name:", unit.Name?.value);
+					console.log("Unit Prefix:", unit.Prefix?.value);
+					console.log("Full unit object:", unit);
+
+					lengthUnit = unit;
+
+					// Determine scale factor based on the unit
+					const unitName = unit.Name?.value;
+					const prefix = unit.Prefix?.value;
+
+					if (unitName === 'METRE') {
+						if (prefix === 'MILLI') {
+							scaleFactor = 0.001; // millimeters to meters
+						} else if (prefix === 'CENTI') {
+							scaleFactor = 0.01; // centimeters to meters
+						} else {
+							scaleFactor = 1.0; // meters
+						}
+					} else if (unitName === 'FOOT') {
+						scaleFactor = 0.3048; // feet to meters
+					} else if (unitName === 'INCH') {
+						scaleFactor = 0.0254; // inches to meters
+					} else {
+						console.warn(`Unknown unit: ${prefix || ''}${unitName}`);
+						scaleFactor = 1.0;
+					}
+
+					console.log(`Scale factor determined: ${scaleFactor}`);
+					break; // Found the length unit, no need to continue
+				}
+			}
+
+			if (lengthUnit) {
+				console.log(`Applying scale factor: ${scaleFactor} for unit: ${lengthUnit.Prefix?.value || ''}${lengthUnit.Name?.value}`);
+				model.mesh.scale.multiplyScalar(scaleFactor);
+			} else {
+				console.log("No length unit found, using default scaling");
+				model.mesh.scale.multiplyScalar(0.3048); // Default to feet-to-meters
+			}
 
 			model.mesh.rotateX(Math.PI * 0.5);
 			// model.scale.multiplyScalar(0.3048);
-			
-			
+
+
 
 			console.log(scene);
 			// scene.add(model.mesh);
-			
+
 		});
 
 		ifc.load('potree/information.ifc', viewer.scene, "ifc", true, matrix)
-												.then(async model => {
-													console.log("mesh", model)
-													
-													console.log("model", model);
-			console.log("modelId", model.modelID);
-			const unit = await ifcLoader.ifcManager.getAllItemsOfType(
-				model.modelID,
-				180925521
-			)
-			console.log(unit)
-			const unitAssignment = await ifcLoader.ifcManager.getItemProperties(
-				model.modelID,
-				unit[0]
-			)
-			console.log(unitAssignment)
+			.then(async model => {
+				console.log("mesh", model)
 
-			let lengthUnit = null;
-        let scaleFactor = 1.0;
-        
-        // Check each unit in the Units array
-        for (let i = 0; i < unitAssignment.Units.length; i++) {
-            const unitRef = unitAssignment.Units[i];
-            const unitId = unitRef.value;
-            
-            // Get the properties of each unit
-            const unit = await ifcLoader.ifcManager.getItemProperties(
-                model.modelID,
-                unitId
-            );
-            
-            console.log(`Unit ${i} (ID: ${unitId}):`, unit);
-            
-            // Check if this is a length unit
-            if (unit.UnitType && unit.UnitType.value === 'LENGTHUNIT') {
-                console.log("🎯 Found length unit!");
-                console.log("Unit Name:", unit.Name?.value);
-                console.log("Unit Prefix:", unit.Prefix?.value);
-                console.log("Full unit object:", unit);
-                
-                lengthUnit = unit;
-                
-                // Determine scale factor based on the unit
-                const unitName = unit.Name?.value;
-                const prefix = unit.Prefix?.value;
-                
-                if (unitName === 'METRE') {
-                    if (prefix === 'MILLI') {
-                        scaleFactor = 0.001; // millimeters to meters
-                    } else if (prefix === 'CENTI') {
-                        scaleFactor = 0.01; // centimeters to meters
-                    } else {
-                        scaleFactor = 1.0; // meters
-                    }
-                } else if (unitName === 'FOOT') {
-                    scaleFactor = 0.3048; // feet to meters
-                } else if (unitName === 'INCH') {
-                    scaleFactor = 0.0254; // inches to meters
-                } else {
-                    console.warn(`Unknown unit: ${prefix || ''}${unitName}`);
-                    scaleFactor = 1.0;
-                }
-                
-                console.log(`Scale factor determined: ${scaleFactor}`);
-                break; // Found the length unit, no need to continue
-            }
-        }
+				console.log("model", model);
+				console.log("modelId", model.modelID);
+				const unit = await ifcLoader.ifcManager.getAllItemsOfType(
+					model.modelID,
+					180925521
+				)
+				console.log(unit)
+				const unitAssignment = await ifcLoader.ifcManager.getItemProperties(
+					model.modelID,
+					unit[0]
+				)
+				console.log(unitAssignment)
+
+				let lengthUnit = null;
+				let scaleFactor = 1.0;
+
+				// Check each unit in the Units array
+				for (let i = 0; i < unitAssignment.Units.length; i++) {
+					const unitRef = unitAssignment.Units[i];
+					const unitId = unitRef.value;
+
+					// Get the properties of each unit
+					const unit = await ifcLoader.ifcManager.getItemProperties(
+						model.modelID,
+						unitId
+					);
+
+					console.log(`Unit ${i} (ID: ${unitId}):`, unit);
+
+					// Check if this is a length unit
+					if (unit.UnitType && unit.UnitType.value === 'LENGTHUNIT') {
+						console.log("🎯 Found length unit!");
+						console.log("Unit Name:", unit.Name?.value);
+						console.log("Unit Prefix:", unit.Prefix?.value);
+						console.log("Full unit object:", unit);
+
+						lengthUnit = unit;
+
+						// Determine scale factor based on the unit
+						const unitName = unit.Name?.value;
+						const prefix = unit.Prefix?.value;
+
+						if (unitName === 'METRE') {
+							if (prefix === 'MILLI') {
+								scaleFactor = 0.001; // millimeters to meters
+							} else if (prefix === 'CENTI') {
+								scaleFactor = 0.01; // centimeters to meters
+							} else {
+								scaleFactor = 1.0; // meters
+							}
+						} else if (unitName === 'FOOT') {
+							scaleFactor = 0.3048; // feet to meters
+						} else if (unitName === 'INCH') {
+							scaleFactor = 0.0254; // inches to meters
+						} else {
+							console.warn(`Unknown unit: ${prefix || ''}${unitName}`);
+							scaleFactor = 1.0;
+						}
+
+						console.log(`Scale factor determined: ${scaleFactor}`);
+						break; // Found the length unit, no need to continue
+					}
+				}
 
 				if (lengthUnit) {
-            console.log(`Applying scale factor: ${scaleFactor} for unit: ${lengthUnit.Prefix?.value || ''}${lengthUnit.Name?.value}`);
-            model.mesh.scale.multiplyScalar(scaleFactor);
-        } else {
-            console.log("No length unit found, using default scaling");
-            model.mesh.scale.multiplyScalar(0.3048); // Default to feet-to-meters
-        }
+					console.log(`Applying scale factor: ${scaleFactor} for unit: ${lengthUnit.Prefix?.value || ''}${lengthUnit.Name?.value}`);
+					model.mesh.scale.multiplyScalar(scaleFactor);
+				} else {
+					console.log("No length unit found, using default scaling");
+					model.mesh.scale.multiplyScalar(0.3048); // Default to feet-to-meters
+				}
 
-			// model.mesh.rotateX(Math.PI * 0.5);
+				// model.mesh.rotateX(Math.PI * 0.5);
 
-													console.log("loaded mesh", model);
-												});
-		
+				console.log("loaded mesh", model);
+			});
+
 	</script>
-	
-  </body>
+
+</body>
+
 </html>
