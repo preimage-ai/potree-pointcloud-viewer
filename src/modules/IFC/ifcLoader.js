@@ -11,8 +11,89 @@ export class IFC {
 
 	load(url, scene, name, visible = true, matrix = []){
 		return new Promise((resolve, reject) => {
-			this.ifcLoader.load(url, (model) => {
+			this.ifcLoader.load(url, async (model) => {
 				console.log("ifc loaded");
+
+				console.log("model", model);
+			console.log("modelId", model.modelID);
+			const unit = await this.ifcLoader.ifcManager.getAllItemsOfType(
+				model.modelID,
+				180925521
+			)
+			console.log(unit)
+
+			if (!unit || unit.length === 0) {
+				console.warn("No unit assignments found in IFC file.");
+				// Fallback: use default scaling or skip unit scaling
+				model.mesh.scale.multiplyScalar(0.3048); // Default to feet-to-meters
+			} else {
+				const unitAssignment = await this.ifcLoader.ifcManager.getItemProperties(
+					model.modelID,
+					unit[0]
+				)
+				console.log(unitAssignment)
+
+				let lengthUnit = null;
+				let scaleFactor = 1.0;
+
+				// Check each unit in the Units array
+				for (let i = 0; i < unitAssignment.Units.length; i++) {
+					const unitRef = unitAssignment.Units[i];
+					const unitId = unitRef.value;
+
+					// Get the properties of each unit
+					const unit = await this.ifcLoader.ifcManager.getItemProperties(
+						model.modelID,
+						unitId
+					);
+
+					console.log(`Unit ${i} (ID: ${unitId}):`, unit);
+
+					// Check if this is a length unit
+					if (unit.UnitType && unit.UnitType.value === 'LENGTHUNIT') {
+						console.log("🎯 Found length unit!");
+						console.log("Unit Name:", unit.Name?.value);
+						console.log("Unit Prefix:", unit.Prefix?.value);
+						console.log("Full unit object:", unit);
+
+						lengthUnit = unit;
+
+						// Determine scale factor based on the unit
+						const unitName = unit.Name?.value;
+						const prefix = unit.Prefix?.value;
+
+						if (unitName === 'METRE') {
+							if (prefix === 'MILLI') {
+								scaleFactor = 0.001; // millimeters to meters
+							} else if (prefix === 'CENTI') {
+								scaleFactor = 0.01; // centimeters to meters
+							} else {
+								scaleFactor = 1.0; // meters
+							}
+						} else if (unitName === 'FOOT') {
+							scaleFactor = 0.3048; // feet to meters
+						} else if (unitName === 'INCH') {
+							scaleFactor = 0.0254; // inches to meters
+						} else {
+							console.warn(`Unknown unit: ${prefix || ''}${unitName}`);
+							scaleFactor = 1.0;
+						}
+
+						console.log(`Scale factor determined: ${scaleFactor}`);
+						break; // Found the length unit, no need to continue
+					}
+				}
+
+				if (lengthUnit) {
+					console.log(`Applying scale factor: ${scaleFactor} for unit: ${lengthUnit.Prefix?.value || ''}${lengthUnit.Name?.value}`);
+					model.mesh.scale.multiplyScalar(scaleFactor);
+				} else {
+					console.log("No length unit found, using default scaling");
+					model.mesh.scale.multiplyScalar(0.3048); // Default to feet-to-meters
+				}
+			}
+
+			// model.mesh.rotateX(Math.PI * 0.5);
 	
 				model.mesh.rotateX(Math.PI * 0.5);
 				// model.scale.multiplyScalar(0.3048);
