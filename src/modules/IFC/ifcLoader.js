@@ -2,6 +2,9 @@ import { IFCLoader } from "../../../libs/three.js/extra/IFCLoader.js";
 import * as THREE from "../../../libs/three.js/build/three.module.js";
 import { IFCUNITASSIGNMENT } from "../../../libs/three.js/extra/ifc/web-ifc-api.js";
 
+// Global scale factor shared across all IFC instances
+let globalIFCScaleFactor = null;
+
 
 export class IFC {
 
@@ -11,7 +14,7 @@ export class IFC {
 		this.ifcLoader.ifcManager.setWasmPath('../../../libs/three.js/extra/ifc/');
 	}
 
-	load(url, scene, name, visible = true, matrix = []) {
+	load(url, scene, name, visible = true, matrix = [], forceScaleFactor = null) {
 		return new Promise((resolve, reject) => {
 			this.ifcLoader.load(url, async (model) => {
 				console.log("ifc loaded");
@@ -25,10 +28,25 @@ export class IFC {
 				)
 				console.log(unit)
 
-				if (!unit || unit.length === 0) {
+				let scaleFactor = 1.0;
+				
+				// If a scale factor is forced, use it directly
+				if (forceScaleFactor !== null) {
+					console.log(`Using forced scale factor: ${forceScaleFactor}`);
+					scaleFactor = forceScaleFactor;
+				} else if (!unit || unit.length === 0) {
 					console.warn("No unit assignments found in IFC file.");
-					// Fallback: use default scaling or skip unit scaling
-					model.mesh.scale.multiplyScalar(1.0); // Default to feet-to-meters
+					// Use the global scale factor if available
+					if (globalIFCScaleFactor !== null) {
+						console.log(`Using global scale factor: ${globalIFCScaleFactor}`);
+						scaleFactor = globalIFCScaleFactor;
+					} else {
+						// Default to feet-to-meters as that seems to be common
+						scaleFactor = 0.3048;
+						console.log(`No global scale factor found. Using default: ${scaleFactor}`);
+						// Set the global scale factor to this default
+						globalIFCScaleFactor = scaleFactor;
+					}
 				} else {
 					const unitAssignment = await this.ifcLoader.ifcManager.getItemProperties(
 						model.modelID,
@@ -38,7 +56,6 @@ export class IFC {
 					console.log(unitAssignment)
 
 					let lengthUnit = null;
-					let scaleFactor = 1.0;
 
 					// Check each unit in the Units array
 					for (let i = 0; i < unitAssignment.Units.length; i++) {
@@ -91,12 +108,20 @@ export class IFC {
 
 					if (lengthUnit) {
 						console.log(`Applying scale factor: ${scaleFactor} for unit: ${lengthUnit.Prefix?.value || ''}${lengthUnit.Name?.value}`);
-						model.mesh.scale.multiplyScalar(scaleFactor);
+						// Store the determined scale factor globally for future use
+						globalIFCScaleFactor = scaleFactor;
+						console.log(`Storing global scale factor: ${scaleFactor}`);
 					} else {
 						console.log("No length unit found, using default scaling");
-						model.mesh.scale.multiplyScalar(1.0); // Default to feet-to-meters
+						scaleFactor = 0.3048; // Default to feet-to-meters
+						// Store this default globally
+						globalIFCScaleFactor = scaleFactor;
+						console.log(`Storing default global scale factor: ${scaleFactor}`);
 					}
 				}
+				// Apply the determined or forced scale factor
+				console.log(`Applying final scale factor: ${scaleFactor}`);
+				model.mesh.scale.multiplyScalar(scaleFactor);
 
 				// model.mesh.rotateX(Math.PI * 0.5);
 
